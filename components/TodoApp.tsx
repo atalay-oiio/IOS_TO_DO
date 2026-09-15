@@ -25,11 +25,11 @@ import { dueGroup, formatDue, headerDate, isOverdue, todayKey } from "@/lib/date
 import { makeTodo, normalizeData, useApplyTheme, useTodoStore } from "@/lib/store";
 import { parseQuick } from "@/lib/parse";
 import { usePush } from "@/lib/push-client";
-import { reminderPayload, useReminders } from "@/lib/reminders";
+import { REMINDER_EVENT, reminderPayload, useReminders, type ReminderEvent } from "@/lib/reminders";
 import { PRIORITY_LABELS, VIEW_TITLES, type SortMode, type Todo, type TodoList, type View } from "@/lib/types";
 
 type AlertState = { title: string; message?: ReactNode; actions: AlertAction[] };
-type Toast = { id: number; text: string; undo?: () => void };
+type Toast = { id: number; text: string; undo?: () => void; label?: string };
 
 const TABS: { view: View; icon: IconName }[] = [
   { view: "today", icon: "sun" },
@@ -101,6 +101,20 @@ export default function TodoApp() {
     const t = setTimeout(() => setBanner(null), 10_000);
     return () => clearTimeout(t);
   }, [banner]);
+
+  // Sunucu hatırlatmayı aldı mı? Onay ya da hata göster
+  useEffect(() => {
+    const onReminder = (e: Event) => {
+      const d = (e as CustomEvent<ReminderEvent>).detail;
+      const clock = (at: number) => new Date(at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+      setToast({
+        id: Date.now(),
+        text: d.type === "scheduled" ? `🔔 Hatırlatma kuruldu · ${d.title} · ${clock(d.at)}` : `Hatırlatma kurulamadı: ${d.message}`,
+      });
+    };
+    window.addEventListener(REMINDER_EVENT, onReminder);
+    return () => window.removeEventListener(REMINDER_EVENT, onReminder);
+  }, []);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -174,7 +188,17 @@ export default function TodoApp() {
   // ---------- Eylemler ----------
   const openAlert = (data: AlertState) => setAlert({ open: true, data });
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
-  const notify = (text: string, undo?: () => void) => setToast({ id: Date.now(), text, undo });
+  const notify = (text: string, undo?: () => void, label?: string) => setToast({ id: Date.now(), text, undo, label });
+
+  // Hatırlatmalı görev eklendi ama telefon push alamıyorsa nedenini hemen söyle
+  const warnIfLocalOnly = (t: Todo) => {
+    if (!settings.reminders || !t.time || t.alert === null || push.state.subscription) return;
+    const { permission, server } = push.state;
+    if (permission === "default") notify("Bildirim izni yok, hatırlatma gelmez", () => push.enable(), "İzin ver");
+    else if (permission === "denied") notify("Bildirimler engelli: tarayıcının site ayarlarından izin ver");
+    else if (permission === "unsupported") notify("Bu tarayıcı bildirimleri desteklemiyor");
+    else if (server !== "checking") notify("Hatırlatma yalnızca uygulama açıkken gelecek");
+  };
 
   // Akıllı ekleme: "yarın 15:00 toplantı !! #iş"
   const parsed = settings.smartAdd && input.trim() ? parseQuick(input, lists) : null;
@@ -191,7 +215,9 @@ export default function TodoApp() {
   const addQuick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    store.add(makeTodo({ ...defaults, ...quick, text: quickTitle }));
+    const todo = makeTodo({ ...defaults, ...quick, text: quickTitle });
+    store.add(todo);
+    warnIfLocalOnly(todo);
     setInput("");
   };
 
@@ -736,7 +762,7 @@ export default function TodoApp() {
                 setToast(null);
               }}
             >
-              Geri Al
+              {toast.label ?? "Geri Al"}
             </button>
           )}
         </div>
@@ -750,7 +776,9 @@ export default function TodoApp() {
         lists={lists}
         notify={{ permission: push.state.permission, enable: push.enable }}
         onSave={(t) => {
-          if (taskSheet.todo) return store.update(t.id, t);
+          const prev = taskSheet.todo;
+          if (!prev || prev.due !== t.due || prev.time !== t.time || prev.alert !== t.alert) warnIfLocalOnly(t);
+          if (prev) return store.update(t.id, t);
           store.add(t);
           if (sheetDefaults?.text) setInput("");
         }}

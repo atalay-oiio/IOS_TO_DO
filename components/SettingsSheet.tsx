@@ -5,9 +5,28 @@ import { Sheet, SheetHeader } from "./Sheet";
 import { ColorDots, Segmented, Switch } from "./ui";
 import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
+import { scheduledSummary } from "@/lib/reminders";
 import { ACCENTS, AURORA, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const AURORA_BG = "linear-gradient(135deg, #7cf8ff, #8b7bff 55%, #ff7ad9)";
+
+// Sunucuda bekleyen hatırlatmalar (kurulduğunu doğrulamak için)
+function ScheduledInfo() {
+  const s = scheduledSummary();
+  const clock = (at: number) =>
+    new Date(at).toLocaleString("tr-TR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="cell">
+      <div className="cell-text">
+        <span>Zamanlanmış hatırlatmalar</span>
+        <small>
+          {s.count ? `${s.count} adet · sıradaki ${clock(s.next!)}` : "Şu an bekleyen yok"}
+          {s.lastError && ` · son hata: ${s.lastError}`}
+        </small>
+      </div>
+    </div>
+  );
+}
 
 export function SettingsSheet({
   open,
@@ -151,6 +170,7 @@ export function SettingsSheet({
               {testResult && <small className="cell-count">{testResult}</small>}
             </button>
           )}
+          {open && permission === "granted" && server === "ready" && subscription && <ScheduledInfo />}
         </div>
         <p className="foot left">
           Saati olan görevler için hatırlatma, görev ayrıntılarından seçilir.

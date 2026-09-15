@@ -11,6 +11,10 @@ const KEY = "glass-todo:reminders";
 const SERVER_WINDOW = 7 * 24 * 3_600_000 - 3_600_000;
 const LOCAL_WINDOW = 24 * 3_600_000;
 
+// Zamanlama sonucu arayüze bildirilir ("Hatırlatma kuruldu" / hata)
+export const REMINDER_EVENT = "glass-reminder";
+export type ReminderEvent = { type: "scheduled"; title: string; at: number } | { type: "error"; message: string };
+
 export function reminderAt(t: Todo) {
   if (t.done || !t.due || !t.time || t.alert === null) return null;
   const [y, m, d] = t.due.split("-").map(Number);
@@ -27,7 +31,11 @@ export function reminderPayload(t: Todo): NotifyPayload {
   return { title: t.text, body, tag: `todo-${t.id}`, id: t.id };
 }
 
-type Store = { endpoint: string | null; items: Record<string, { at: number; key: string; messageId: string }> };
+type Store = {
+  endpoint: string | null;
+  items: Record<string, { at: number; key: string; messageId: string }>;
+  lastError?: string;
+};
 
 const load = (): Store => {
   try {
@@ -41,17 +49,31 @@ const save = (s: Store) => {
     localStorage.setItem(KEY, JSON.stringify(s));
   } catch {}
 };
+const emit = (detail: ReminderEvent) => window.dispatchEvent(new CustomEvent(REMINDER_EVENT, { detail }));
 
+// Ayarlar ekranı için: sunucuda bekleyen hatırlatmalar
+export function scheduledSummary() {
+  const s = load();
+  const now = Date.now();
+  const upcoming = Object.values(s.items)
+    .filter((e) => e.at > now)
+    .sort((a, b) => a.at - b.at);
+  return { count: upcoming.length, next: upcoming[0]?.at, lastError: s.lastError };
+}
+
+// keepalive: uygulama kapatılırken başlamış istek de tamamlanır
 const post = async (path: string, body: unknown) => {
   try {
     const res = await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
+      keepalive: true,
     });
-    return res.ok ? ((await res.json()) as { messageId?: string }) : null;
+    const data = res.ok ? ((await res.json().catch(() => ({}))) as { messageId?: string }) : null;
+    return { ok: res.ok, status: res.status, data };
   } catch {
-    return null;
+    return { ok: false, status: 0, data: null };
   }
 };
 
@@ -88,9 +110,16 @@ async function syncServer(todos: Todo[], enabled: boolean, sub: PushSubscription
   for (const [id, w] of want) {
     if (store.items[id]) continue;
     const res = await post("/api/push/schedule", { subscription: sub, at: w.at, ...reminderPayload(w.todo) });
-    if (res?.messageId) {
-      store.items[id] = { at: w.at, key: w.key, messageId: res.messageId };
+    if (res.ok && res.data?.messageId) {
+      store.items[id] = { at: w.at, key: w.key, messageId: res.data.messageId };
+      store.lastError = undefined;
       save(store);
+      emit({ type: "scheduled", title: w.todo.text, at: w.at });
+    } else {
+      store.lastError = res.status ? `sunucu hatası (${res.status})` : "bağlantı hatası";
+      save(store);
+      emit({ type: "error", message: store.lastError });
+      break; // aynı hatayı her görev için tekrarlama; sonraki eşitlemede yeniden denenir
     }
   }
 }
@@ -126,7 +155,7 @@ export function useReminders({
   const latest = useRef({ todos, enabled });
   latest.current = { todos, enabled };
 
-  // Uygulama açıkken: yerel zamanlayıcılar (uygulama içi bildirim şeridi + sunucu yoksa sistem bildirimi)
+  // Uygulama açıkken: yerel zamanlayıcılar (uygulama içi şerit + sunucu yoksa sistem bildirimi)
   useEffect(() => {
     if (!enabled || !todos) return;
     const now = Date.now();
@@ -138,27 +167,28 @@ export function useReminders({
     return () => timers.forEach(clearTimeout);
   }, [todos, enabled, subscription]);
 
-  // Sunucu: görevler değişince (gecikmeli) eşitle
+  // Sunucu: görevler değişince hemen eşitle (kısa gecikme art arda değişiklikleri birleştirir)
   useEffect(() => {
     if (!subscription || !todos) return;
-    const t = setTimeout(() => queue(() => syncServer(todos, enabled, subscription)), 1200);
+    const t = setTimeout(() => queue(() => syncServer(todos, enabled, subscription)), 300);
     return () => clearTimeout(t);
   }, [todos, enabled, subscription]);
 
-  // Tekrar çevrimiçi olunca, uygulamaya dönünce ve yarım saatte bir
+  // Uygulama arka plana alınırken/kapatılırken, geri dönünce, çevrimiçi olunca ve yarım saatte bir
   useEffect(() => {
     if (!subscription) return;
     const run = () => {
       const { todos: list, enabled: on } = latest.current;
       if (list) queue(() => syncServer(list, on, subscription));
     };
-    const onVisible = () => document.visibilityState === "visible" && run();
     window.addEventListener("online", run);
-    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pagehide", run);
+    document.addEventListener("visibilitychange", run);
     const iv = setInterval(run, 30 * 60_000);
     return () => {
       window.removeEventListener("online", run);
-      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pagehide", run);
+      document.removeEventListener("visibilitychange", run);
       clearInterval(iv);
     };
   }, [subscription]);
