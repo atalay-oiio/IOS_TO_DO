@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import "./overlays.css";
+
+// SF Pro yalnızca Apple cihazlarda var; Android/Windows'ta en yakın karşılık Inter
+const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap", variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: "Glass Todo",
@@ -34,7 +38,7 @@ var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('cont
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" data-theme="dark" suppressHydrationWarning>
+    <html lang="tr" data-theme="dark" className={inter.variable} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#07070f" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

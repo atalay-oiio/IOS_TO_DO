@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
 import { ColorDots, Segmented, Switch } from "./ui";
 import { Icon } from "./icons";
+import type { usePush } from "@/lib/push-client";
 import { ACCENTS, AURORA, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const AURORA_BG = "linear-gradient(135deg, #7cf8ff, #8b7bff 55%, #ff7ad9)";
@@ -19,9 +20,11 @@ export function SettingsSheet({
   onImport,
   onClearCompleted,
   onDeleteAll,
+  push,
 }: {
   open: boolean;
   onClose: () => void;
+  push: ReturnType<typeof usePush>;
   settings: Settings;
   setSettings: (patch: Partial<Settings>) => void;
   completedCount: number;
@@ -32,6 +35,21 @@ export function SettingsSheet({
   onDeleteAll: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [testResult, setTestResult] = useState("");
+  const { permission, server, subscription } = push.state;
+
+  const status =
+    permission === "unsupported"
+      ? "Bu tarayıcı bildirimleri desteklemiyor"
+      : permission === "denied"
+        ? "Engelli · tarayıcının site ayarlarından izin ver"
+        : permission === "default"
+          ? "Bildirim izni gerekiyor"
+          : server === "checking"
+            ? "Kontrol ediliyor…"
+            : server === "ready" && subscription
+              ? "Açık · uygulama kapalıyken de gelir"
+              : "Açık · yalnızca uygulama açıkken";
 
   return (
     <Sheet open={open} onClose={onClose} label="Ayarlar">
@@ -96,8 +114,62 @@ export function SettingsSheet({
           </div>
         </div>
 
+        <p className="group-label">Hatırlatmalar</p>
+        <div className="group">
+          <div className="cell">
+            <span className="cell-icon" style={{ background: "#FF453A" }}>
+              <Icon name="bell" size={17} />
+            </span>
+            <div className="cell-text">
+              <span>Hatırlatmalar</span>
+              <small>{status}</small>
+            </div>
+            <Switch
+              label="Hatırlatmalar"
+              checked={settings.reminders}
+              onChange={(reminders) => setSettings({ reminders })}
+            />
+          </div>
+          {permission === "default" && (
+            <button type="button" className="cell action" onClick={push.enable}>
+              <Icon name="bell" size={19} />
+              <span>Bildirimlere izin ver</span>
+            </button>
+          )}
+          {permission === "granted" && (
+            <button
+              type="button"
+              className="cell action"
+              onClick={async () => {
+                setTestResult("Gönderiliyor…");
+                const r = await push.test();
+                setTestResult(r === "push" ? "Birkaç saniye içinde gelecek" : r === "local" ? "Gösterildi" : "Gönderilemedi");
+              }}
+            >
+              <Icon name="sparkles" size={19} />
+              <span>Test bildirimi gönder</span>
+              {testResult && <small className="cell-count">{testResult}</small>}
+            </button>
+          )}
+        </div>
+        <p className="foot left">
+          Saati olan görevler için hatırlatma, görev ayrıntılarından seçilir.
+          {server === "off" && permission === "granted" && " Uygulama kapalıyken bildirim gelmesi için sunucu kurulumu gerekiyor."}
+        </p>
+
         <p className="group-label">Davranış</p>
         <div className="group">
+          <div className="cell">
+            <div className="cell-text">
+              <span>Akıllı ekleme</span>
+              <small>“yarın 15:00 toplantı !! #iş” gibi yazınca tarih, saat, öncelik ve liste otomatik ayarlanır</small>
+            </div>
+            <Switch
+              label="Akıllı ekleme"
+              checked={settings.smartAdd}
+              onChange={(smartAdd) => setSettings({ smartAdd })}
+            />
+          </div>
           <div className="cell">
             <div className="cell-text">
               <span>Silmeden önce sor</span>

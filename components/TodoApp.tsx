@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -21,9 +21,12 @@ import { Alert, type AlertAction } from "./Sheet";
 import { Menu, type MenuItem } from "./Menu";
 import { Icon, type IconName } from "./icons";
 import { Confetti, ProgressRing } from "./Decor";
-import { dueGroup, headerDate, isOverdue, todayKey } from "@/lib/date";
+import { dueGroup, formatDue, headerDate, isOverdue, todayKey } from "@/lib/date";
 import { makeTodo, normalizeData, useApplyTheme, useTodoStore } from "@/lib/store";
-import { VIEW_TITLES, type SortMode, type Todo, type TodoList, type View } from "@/lib/types";
+import { parseQuick } from "@/lib/parse";
+import { usePush } from "@/lib/push-client";
+import { reminderPayload, useReminders } from "@/lib/reminders";
+import { PRIORITY_LABELS, VIEW_TITLES, type SortMode, type Todo, type TodoList, type View } from "@/lib/types";
 
 type AlertState = { title: string; message?: ReactNode; actions: AlertAction[] };
 type Toast = { id: number; text: string; undo?: () => void };
@@ -61,6 +64,13 @@ export default function TodoApp() {
   const [completedOpen, setCompletedOpen] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [, setTick] = useState(0);
+  const [banner, setBanner] = useState<{ id: string; title: string; body: string } | null>(null);
+  const [online, setOnline] = useState(true);
+  const [inputFocused, setInputFocused] = useState(false);
+  const [sheetDefaults, setSheetDefaults] = useState<(Partial<Todo> & { listId: string }) | null>(null);
+  const push = usePush();
+  const todosRef = useRef(todos);
+  todosRef.current = todos;
 
   // Gecikmiş/bugün etiketleri güncel kalsın
   useEffect(() => {
@@ -85,6 +95,35 @@ export default function TodoApp() {
     const t = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(null), 10_000);
+    return () => clearTimeout(t);
+  }, [banner]);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
+
+  // Hatırlatmalar: uygulama açıkken şerit + (sunucu yoksa) yerel bildirim; sunucu varsa push zamanlanır
+  useReminders({
+    todos: loaded ? todos : null,
+    enabled: settings.reminders,
+    subscription: push.state.subscription,
+    onFire: (t, viaPush) => {
+      const p = reminderPayload(t);
+      setBanner({ id: t.id, title: p.title, body: p.body });
+      if (!viaPush) push.showLocal(p);
+    },
+  });
 
   const listById = useMemo(() => new Map(lists.map((l) => [l.id, l])), [lists]);
   const today = todayKey();
@@ -137,11 +176,22 @@ export default function TodoApp() {
   const closeAlert = () => setAlert((a) => ({ ...a, open: false }));
   const notify = (text: string, undo?: () => void) => setToast({ id: Date.now(), text, undo });
 
+  // Akıllı ekleme: "yarın 15:00 toplantı !! #iş"
+  const parsed = settings.smartAdd && input.trim() ? parseQuick(input, lists) : null;
+  const quick: Partial<Pick<Todo, "due" | "time" | "priority" | "listId">> = parsed?.found
+    ? {
+        ...(parsed.due ? { due: parsed.due } : {}),
+        ...(parsed.time ? { time: parsed.time } : {}),
+        ...(parsed.priority ? { priority: parsed.priority } : {}),
+        ...(parsed.listId ? { listId: parsed.listId } : {}),
+      }
+    : {};
+  const quickTitle = parsed?.found && parsed.text ? parsed.text : input.trim();
+
   const addQuick = (e: React.FormEvent) => {
     e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
-    store.add(makeTodo({ text, ...defaults }));
+    if (!input.trim()) return;
+    store.add(makeTodo({ ...defaults, ...quick, text: quickTitle }));
     setInput("");
   };
 
@@ -277,7 +327,11 @@ export default function TodoApp() {
     });
   };
 
-  const openNew = () => setTaskSheet({ open: true, todo: null });
+  // withInput: hızlı ekleme kutusundaki yazıyı (ayrıştırılmış haliyle) ayrıntı sayfasına taşı
+  const openNew = (withInput = false) => {
+    setSheetDefaults(withInput && input.trim() ? { ...defaults, ...quick, text: quickTitle } : null);
+    setTaskSheet({ open: true, todo: null });
+  };
   const openSearch = () => {
     setSearchOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -291,6 +345,7 @@ export default function TodoApp() {
       if (document.documentElement.classList.contains("locked")) return;
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
+        setSheetDefaults(null);
         setTaskSheet({ open: true, todo: null });
       } else if (e.key === "/") {
         e.preventDefault();
@@ -300,6 +355,36 @@ export default function TodoApp() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Bildirimden gelen eylemler: ?done=id, ?task=id, ?new=1 (Android kısayolu) ve service worker mesajları
+  useEffect(() => {
+    if (!loaded) return;
+    const complete = (id: string) => {
+      const t = todosRef.current.find((x) => x.id === id);
+      if (!t) return;
+      if (!t.done) store.setDone(new Set([id]), true);
+      notify(`“${t.text}” tamamlandı`);
+    };
+    const open = (id: string) => {
+      const t = todosRef.current.find((x) => x.id === id);
+      if (t) setTaskSheet({ open: true, todo: t });
+    };
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("done")) complete(q.get("done")!);
+    else if (q.get("task")) open(q.get("task")!);
+    else if (q.has("new")) {
+      setSheetDefaults(null);
+      setTaskSheet({ open: true, todo: null });
+    }
+    if (window.location.search) history.replaceState(null, "", window.location.pathname);
+    const onMessage = (e: MessageEvent) => {
+      if (e.data?.type === "done") complete(e.data.id);
+      if (e.data?.type === "open") open(e.data.id);
+    };
+    navigator.serviceWorker?.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker?.removeEventListener("message", onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -373,6 +458,12 @@ export default function TodoApp() {
       {/* Kompakt üst çubuk (kaydırınca görünür) */}
       <div className={`topbar ${scrolled ? "scrolled" : ""}`}>
         <span className="topbar-title">{title}</span>
+        {!online && (
+          <span className="offline-pill" role="status">
+            <Icon name="wifiOff" size={14} stroke={2.2} />
+            Çevrimdışı
+          </span>
+        )}
         <div className="topbar-actions">
           <button type="button" className="glass-btn" onClick={openSearch} aria-label="Ara">
             <Icon name="search" size={19} />
@@ -477,22 +568,17 @@ export default function TodoApp() {
       </nav>
 
       <form className="add material" onSubmit={addQuick}>
-        <span className="add-circle" style={{ borderColor: listById.get(defaultListId)?.color }} />
+        <span className="add-circle" style={{ borderColor: listById.get(quick.listId ?? defaultListId)?.color }} />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onFocus={() => setInputFocused(true)}
+          onBlur={() => setInputFocused(false)}
           placeholder={`${listById.get(defaultListId)?.name ?? ""} listesine ekle…`}
           aria-label="Yeni görev"
           enterKeyHint="done"
         />
-        <button
-          type="button"
-          className="icon-btn"
-          onClick={() => {
-            setTaskSheet({ open: true, todo: null });
-          }}
-          aria-label="Ayrıntılı ekle"
-        >
+        <button type="button" className="icon-btn" onClick={() => openNew(true)} aria-label="Ayrıntılı ekle">
           <Icon name="sliders" size={19} />
         </button>
         <button type="submit" className="add-btn" aria-label="Ekle" disabled={!input.trim()}>
@@ -500,12 +586,40 @@ export default function TodoApp() {
         </button>
       </form>
 
-      {active.length > 1 && sortable && (
+      {parsed?.found ? (
+        <div className="parse-preview" aria-live="polite">
+          {parsed.due && (
+            <span className="pchip">
+              <Icon name="calendar" size={13} stroke={2.2} />
+              {formatDue(parsed.due, parsed.time)}
+            </span>
+          )}
+          {parsed.priority ? (
+            <span className="pchip red">
+              {"!".repeat(parsed.priority)} {PRIORITY_LABELS[parsed.priority]}
+            </span>
+          ) : null}
+          {parsed.listId && (
+            <span className="pchip">
+              <i className="dot" style={{ background: listById.get(parsed.listId)?.color }} />
+              {listById.get(parsed.listId)?.name}
+            </span>
+          )}
+          {parsed.time && settings.reminders && (
+            <span className="pchip">
+              <Icon name="bell" size={13} stroke={2.2} />
+              Hatırlatılacak
+            </span>
+          )}
+        </div>
+      ) : inputFocused && !input && settings.smartAdd ? (
+        <p className="hint">Dene: “yarın 15:00 toplantı !! #iş” ya da “cuma akşamı sinema”</p>
+      ) : active.length > 1 && sortable ? (
         <p className="hint">
           <span className="touch-only">Sıralamak için basılı tut · İşlemler için sola kaydır</span>
           <span className="mouse-only">Sıralamak için sürükle · Düzenlemek için metne tıkla · N: yeni görev</span>
         </p>
-      )}
+      ) : null}
 
       <DndContext
         sensors={sensors}
@@ -584,10 +698,32 @@ export default function TodoApp() {
             </button>
           ))}
         </nav>
-        <button type="button" className="fab" onClick={openNew} aria-label="Yeni görev">
+        <button type="button" className="fab" onClick={() => openNew()} aria-label="Yeni görev">
           <Icon name="plus" size={26} stroke={2.4} />
         </button>
       </div>
+
+      {banner && (
+        <div className="banner material" role="alert" key={banner.id}>
+          <span className="banner-icon">
+            <Icon name="bell" size={19} />
+          </span>
+          <div className="banner-text">
+            <b>{banner.title}</b>
+            <small>{banner.body.split("\n")[0]}</small>
+          </div>
+          <button
+            type="button"
+            className="banner-btn"
+            onClick={() => {
+              store.setDone(new Set([banner.id]), true);
+              setBanner(null);
+            }}
+          >
+            Tamamla
+          </button>
+        </div>
+      )}
 
       {toast && (
         <div className="toast material" role="status" key={toast.id}>
@@ -610,14 +746,20 @@ export default function TodoApp() {
         open={taskSheet.open}
         todo={taskSheet.todo}
         onClose={() => setTaskSheet((s) => ({ ...s, open: false }))}
-        defaults={defaults}
+        defaults={sheetDefaults ?? defaults}
         lists={lists}
-        onSave={(t) => (taskSheet.todo ? store.update(t.id, t) : store.add(t))}
+        notify={{ permission: push.state.permission, enable: push.enable }}
+        onSave={(t) => {
+          if (taskSheet.todo) return store.update(t.id, t);
+          store.add(t);
+          if (sheetDefaults?.text) setInput("");
+        }}
         onDelete={requestDelete}
       />
 
       <SettingsSheet
         open={settingsOpen}
+        push={push}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         setSettings={setSettings}

@@ -9,6 +9,7 @@ export type Todo = {
   notes: string;
   due?: string; // YYYY-MM-DD (yerel saat)
   time?: string; // HH:mm
+  alert: number | null; // hatırlatma: saatten kaç dakika önce (null = yok)
   priority: Priority;
   flagged: boolean;
   listId: string;
@@ -30,7 +31,19 @@ export type Settings = {
   confirmDelete: boolean;
   celebrate: boolean;
   sort: SortMode;
+  reminders: boolean;
+  smartAdd: boolean;
 };
+
+export const ALERT_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: "Yok" },
+  { value: 0, label: "Zamanında" },
+  { value: 5, label: "5 dk önce" },
+  { value: 15, label: "15 dk önce" },
+  { value: 30, label: "30 dk önce" },
+  { value: 60, label: "1 saat önce" },
+  { value: 1440, label: "1 gün önce" },
+];
 
 // iOS sistem renkleri
 export const COLORS = [
@@ -67,6 +80,8 @@ export const DEFAULT_SETTINGS: Settings = {
   confirmDelete: true,
   celebrate: true,
   sort: "manual",
+  reminders: true,
+  smartAdd: true,
 };
 
 export const newId = () =>

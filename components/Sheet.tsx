@@ -2,10 +2,24 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-// Açık katmanlar yığını: Escape yalnızca en üsttekini kapatır, kaydırma kilidi sayılır.
-const stack: { current: () => void }[] = [];
-
+// Açık katmanlar yığını: Escape ve Android geri hareketi yalnızca en üsttekini kapatır.
+type Layer = { close: () => void; popped: boolean };
+const stack: Layer[] = [];
 let locks = 0;
+let ignorePops = 0;
+let listening = false;
+
+function onPopState() {
+  if (ignorePops > 0) {
+    ignorePops--;
+    return;
+  }
+  const top = stack[stack.length - 1];
+  if (top) {
+    top.popped = true;
+    top.close();
+  }
+}
 
 export function useLayer(open: boolean, onClose: () => void, lock = true) {
   const ref = useRef(onClose);
@@ -13,13 +27,19 @@ export function useLayer(open: boolean, onClose: () => void, lock = true) {
 
   useEffect(() => {
     if (!open) return;
-    const entry = ref;
+    const entry: Layer = { close: () => ref.current(), popped: false };
     stack.push(entry);
     if (lock && ++locks === 1) document.documentElement.classList.add("locked");
+    // Geri tuşu/hareketi uygulamadan çıkmak yerine açık katmanı kapatsın
+    if (!listening) {
+      window.addEventListener("popstate", onPopState);
+      listening = true;
+    }
+    history.pushState({ glassLayer: true }, "");
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && stack[stack.length - 1] === entry) {
         e.stopPropagation();
-        entry.current();
+        entry.close();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -27,6 +47,10 @@ export function useLayer(open: boolean, onClose: () => void, lock = true) {
       window.removeEventListener("keydown", onKey);
       stack.splice(stack.indexOf(entry), 1);
       if (lock && --locks === 0) document.documentElement.classList.remove("locked");
+      if (!entry.popped) {
+        ignorePops++;
+        history.back();
+      }
     };
   }, [open, lock]);
 }

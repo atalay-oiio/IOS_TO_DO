@@ -235,6 +235,7 @@ export function TaskRow({
                 <span className={`meta ${overdue ? "overdue" : ""}`}>
                   <Icon name="calendar" size={13} stroke={2.2} />
                   {formatDue(todo.due, todo.time)}
+                  {todo.time && todo.alert !== null && !todo.done && <Icon name="bell" size={12} stroke={2.2} />}
                 </span>
               )}
               {todo.subtasks.length > 0 && (

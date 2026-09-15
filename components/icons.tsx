@@ -107,6 +107,13 @@ const paths = {
       <path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z" />
     </>
   ),
+  bell: <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.6 2H4.4zM10 21a2.2 2.2 0 0 0 4 0" />,
+  wifiOff: (
+    <>
+      <path d="M2.5 8.8a14 14 0 0 1 19 0M5.8 12.3a9.5 9.5 0 0 1 12.4 0M9.2 15.8a4.8 4.8 0 0 1 5.6 0M3.5 3.5l17 17" />
+      <circle cx="12" cy="19.3" r="1.2" {...F} />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof paths;

@@ -54,6 +54,8 @@ function normalizeTodo(v: unknown, listIds: Set<string>, fallbackList: string): 
     notes: str(v.notes),
     due,
     time: due ? timeKey(v.time) : undefined,
+    alert:
+      v.alert === null ? null : typeof v.alert === "number" && v.alert >= 0 && v.alert <= 10080 ? Math.round(v.alert) : 0,
     priority: (p >= 0 && p <= 3 ? Math.round(p) : 0) as Priority,
     flagged: v.flagged === true,
     listId: listIds.has(listId) ? listId : fallbackList,
@@ -102,6 +104,7 @@ export function makeTodo(partial: Partial<Todo> & { text: string; listId: string
   return {
     done: false,
     notes: "",
+    alert: 0,
     priority: 0,
     flagged: false,
     subtasks: [],

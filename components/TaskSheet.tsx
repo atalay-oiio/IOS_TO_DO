@@ -6,15 +6,16 @@ import { Segmented, Switch } from "./ui";
 import { Icon } from "./icons";
 import { addDays, formatDue, nextMonday, nextWeekend, todayKey } from "@/lib/date";
 import { makeTodo } from "@/lib/store";
-import { newId, PRIORITY_LABELS, type Priority, type Todo, type TodoList } from "@/lib/types";
+import { ALERT_OPTIONS, newId, PRIORITY_LABELS, type Priority, type Todo, type TodoList } from "@/lib/types";
 
-type Draft = Pick<Todo, "text" | "notes" | "due" | "time" | "priority" | "flagged" | "listId" | "subtasks">;
+type Draft = Pick<Todo, "text" | "notes" | "due" | "time" | "alert" | "priority" | "flagged" | "listId" | "subtasks">;
 
 const fromTodo = (t: Todo): Draft => ({
   text: t.text,
   notes: t.notes,
   due: t.due,
   time: t.time,
+  alert: t.alert,
   priority: t.priority,
   flagged: t.flagged,
   listId: t.listId,
@@ -27,6 +28,7 @@ export function TaskSheet({
   todo,
   defaults,
   lists,
+  notify,
   onSave,
   onDelete,
 }: {
@@ -35,6 +37,7 @@ export function TaskSheet({
   todo: Todo | null; // null = yeni görev
   defaults: Partial<Draft> & { listId: string };
   lists: TodoList[];
+  notify?: { permission: string; enable: () => void };
   onSave: (todo: Todo) => void;
   onDelete: (id: string) => void;
 }) {
@@ -179,6 +182,40 @@ export function TaskSheet({
                   onChange={(e) => set({ time: e.target.value || undefined })}
                   aria-label="Saat seç"
                 />
+                <div className="alert-row">
+                  <span className="alert-label">
+                    <Icon name="bell" size={14} stroke={2.2} /> Hatırlat
+                  </span>
+                  <div className="chips wrap" role="radiogroup" aria-label="Hatırlatma">
+                    {ALERT_OPTIONS.map((o) => (
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={d.alert === o.value}
+                        key={String(o.value)}
+                        className={`chip small ${d.alert === o.value ? "on" : ""}`}
+                        onClick={() => set({ alert: o.value })}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {d.alert !== null && notify?.permission === "default" && (
+                  <div className="notify-hint">
+                    <Icon name="bell" size={16} />
+                    <span>Hatırlatmaların gelmesi için bildirim izni gerekiyor.</span>
+                    <button type="button" onClick={notify.enable}>
+                      İzin ver
+                    </button>
+                  </div>
+                )}
+                {d.alert !== null && notify?.permission === "denied" && (
+                  <div className="notify-hint">
+                    <Icon name="bell" size={16} />
+                    <span>Bildirimler engelli. Tarayıcının site ayarlarından izin ver.</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -321,5 +358,5 @@ export function TaskSheet({
 }
 
 function blank(defaults: Partial<Draft> & { listId: string }): Draft {
-  return { text: "", notes: "", priority: 0, flagged: false, subtasks: [], ...defaults };
+  return { text: "", notes: "", alert: 0, priority: 0, flagged: false, subtasks: [], ...defaults };
 }
