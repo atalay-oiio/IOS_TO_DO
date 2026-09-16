@@ -1,3 +1,5 @@
+import { DEFAULT_PAINT } from "./paint";
+
 export type Priority = 0 | 1 | 2 | 3;
 
 export type Subtask = { id: string; text: string; done: boolean };
@@ -26,7 +28,8 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export type Settings = {
   theme: ThemeMode;
-  accent: string;
+  accent: string; // paint id ya da eski kayıtlardaki "#rrggbb"
+  background: string; // "theme" (varsayılan) | "plain" | paint id
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;
@@ -45,25 +48,6 @@ export const ALERT_OPTIONS: { value: number | null; label: string }[] = [
   { value: 1440, label: "1 gün önce" },
 ];
 
-// iOS sistem renkleri
-export const COLORS = [
-  "#0A84FF", // mavi
-  "#5E5CE6", // indigo
-  "#BF5AF2", // mor
-  "#FF375F", // pembe
-  "#FF453A", // kırmızı
-  "#FF9F0A", // turuncu
-  "#FFD60A", // sarı
-  "#30D158", // yeşil
-  "#63E6E2", // nane
-  "#64D2FF", // camgöbeği
-  "#AC8E68", // kahverengi
-  "#8E8E93", // gri
-];
-
-export const AURORA = "aurora";
-export const ACCENTS = [AURORA, "#0A84FF", "#5E5CE6", "#BF5AF2", "#FF375F", "#FF9F0A", "#30D158", "#64D2FF"];
-
 export const PRIORITY_LABELS = ["Yok", "Düşük", "Orta", "Yüksek"] as const;
 
 export const VIEW_TITLES: Record<View, string> = {
@@ -75,7 +59,8 @@ export const VIEW_TITLES: Record<View, string> = {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
-  accent: AURORA,
+  accent: DEFAULT_PAINT,
+  background: "theme",
   showCompleted: true,
   confirmDelete: true,
   celebrate: true,

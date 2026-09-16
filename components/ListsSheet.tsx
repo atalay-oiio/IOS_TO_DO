@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
-import { ColorDots } from "./ui";
+import { PaintDots, type PaintOption } from "./ui";
 import { Icon } from "./icons";
-import { COLORS, newId, type TodoList } from "@/lib/types";
+import { PAINTS, paintBackground, paintStyle, resolvePaint } from "@/lib/paint";
+import { newId, type TodoList } from "@/lib/types";
+
+const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
 
 export function ListsSheet({
   open,
@@ -51,10 +54,10 @@ export function ListsSheet({
         aria-label="Liste adı"
         autoFocus
       />
-      <ColorDots
+      <PaintDots
         label="Liste rengi"
-        colors={COLORS}
-        value={draft.color}
+        options={PAINT_OPTIONS}
+        value={resolvePaint(draft.color).id}
         onChange={(color) => setDraft({ ...draft, color })}
       />
       <div className="editor-actions">
@@ -76,7 +79,7 @@ export function ListsSheet({
           <button
             type="button"
             className="nav-btn"
-            onClick={() => setDraft({ id: newId(), name: "", color: COLORS[(lists.length * 3) % COLORS.length] })}
+            onClick={() => setDraft({ id: newId(), name: "", color: PAINTS[(lists.length * 3) % PAINTS.length].id })}
             disabled={!!draft}
           >
             <Icon name="plus" size={18} /> Yeni
@@ -98,7 +101,7 @@ export function ListsSheet({
               </div>
             ) : (
               <div key={l.id} className="cell">
-                <span className="list-badge" style={{ background: l.color }}>
+                <span className="list-badge" style={paintStyle(l.color)}>
                   <Icon name="list" size={16} />
                 </span>
                 <button type="button" className="cell-text as-btn" onClick={() => setDraft(l)}>

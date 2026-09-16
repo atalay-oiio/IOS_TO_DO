@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "./icons";
 import { formatDue, isOverdue } from "@/lib/date";
+import { paintStyle } from "@/lib/paint";
 import type { Todo, TodoList } from "@/lib/types";
 
 const ACTIONS_W = 144; // sola kaydırınca açılan iki butonun genişliği
@@ -190,7 +191,7 @@ export function TaskRow({
         <button
           type="button"
           className={`check ${todo.done ? "on" : ""}`}
-          style={{ "--c": list?.color ?? "var(--accent)" } as CSSProperties}
+          style={list ? paintStyle(list.color) : undefined}
           onClick={onToggle}
           aria-label={todo.done ? "Tamamlanmadı olarak işaretle" : "Tamamlandı olarak işaretle"}
         >
@@ -246,7 +247,7 @@ export function TaskRow({
               )}
               {showList && list && (
                 <span className="meta">
-                  <i className="dot" style={{ background: list.color }} />
+                  <i className="dot" style={paintStyle(list.color)} />
                   {list.name}
                 </span>
               )}

@@ -60,31 +60,32 @@ export function Segmented<T extends string | number>({
   );
 }
 
-export function ColorDots({
-  colors,
+export type PaintOption = { id: string; name: string; background: string };
+
+export function PaintDots({
+  options,
   value,
   onChange,
   label,
-  render,
 }: {
-  colors: string[];
+  options: PaintOption[];
   value: string;
-  onChange: (c: string) => void;
+  onChange: (id: string) => void;
   label: string;
-  render?: (c: string) => string;
 }) {
   return (
     <div className="color-dots" role="radiogroup" aria-label={label}>
-      {colors.map((c) => (
+      {options.map((o) => (
         <button
-          key={c}
+          key={o.id}
           type="button"
           role="radio"
-          aria-checked={c === value}
-          aria-label={c}
-          className={`color-dot ${c === value ? "on" : ""}`}
-          style={{ background: render ? render(c) : c }}
-          onClick={() => onChange(c)}
+          aria-checked={o.id === value}
+          aria-label={o.name}
+          title={o.name}
+          className={`color-dot ${o.id === value ? "on" : ""}`}
+          style={{ background: o.background }}
+          onClick={() => onChange(o.id)}
         />
       ))}
     </div>

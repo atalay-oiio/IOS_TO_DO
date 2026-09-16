@@ -2,9 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
+import { DEFAULT_LIST_PAINTS, isPaintId, paintBackground, resolvePaint } from "./paint";
 import {
-  AURORA,
-  COLORS,
   DEFAULT_SETTINGS,
   newId,
   type Priority,
@@ -19,9 +18,9 @@ const LEGACY_KEY = "glass-todo:v1";
 export const SETTINGS_KEY = "glass-todo:settings";
 
 const DEFAULT_LISTS: TodoList[] = [
-  { id: "personal", name: "Kişisel", color: "#0A84FF" },
-  { id: "work", name: "İş", color: "#FF9F0A" },
-  { id: "shopping", name: "Alışveriş", color: "#30D158" },
+  { id: "personal", name: "Kişisel", color: DEFAULT_LIST_PAINTS[0] },
+  { id: "work", name: "İş", color: DEFAULT_LIST_PAINTS[1] },
+  { id: "shopping", name: "Alışveriş", color: DEFAULT_LIST_PAINTS[2] },
 ];
 
 type Data = { todos: Todo[]; lists: TodoList[] };
@@ -34,7 +33,13 @@ const timeKey = (v: unknown) => (typeof v === "string" && /^\d{2}:\d{2}$/.test(v
 
 function normalizeList(v: unknown): TodoList | null {
   if (!isObj(v) || !str(v.name).trim()) return null;
-  return { id: str(v.id) || newId(), name: str(v.name).trim(), color: str(v.color, COLORS[0]) };
+  const color = str(v.color);
+  return {
+    id: str(v.id) || newId(),
+    name: str(v.name).trim(),
+    // paint id ya da eski kayıtlardaki düz renk kodu
+    color: isPaintId(color) || /^#[0-9a-fA-F]{6}$/.test(color) ? color : DEFAULT_LIST_PAINTS[0],
+  };
 }
 
 function normalizeSubtask(v: unknown): Subtask | null {
@@ -243,38 +248,51 @@ export function useTodoStore() {
   };
 }
 
-// Temayı ve vurgu rengini <html>'e uygular
+const BLOB_VARS = ["--blob-1", "--blob-2", "--blob-3", "--blob-4"];
+
+// Temayı, vurgu rengini ve arka planı <html>'e uygular
 export function useApplyTheme(settings: Settings, loaded: boolean) {
   useEffect(() => {
     if (!loaded) return;
     const root = document.documentElement;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
+
     const apply = () => {
       const dark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
       root.dataset.theme = dark ? "dark" : "light";
       document
-        .querySelector('meta[name="theme-color"]')
-        ?.setAttribute("content", dark ? "#07070f" : "#eef0f8");
+        .querySelectorAll('meta[name="theme-color"]')
+        .forEach((m) => m.setAttribute("content", dark ? "#07070f" : "#eef0f8"));
+
+      // Vurgu rengi: geçişli zemin + açık/koyu temada okunaklı tek renk
+      const paint = resolvePaint(settings.accent);
+      root.style.setProperty("--accent", (dark ? paint.solid : paint.solidLight) ?? paint.solid);
+      root.style.setProperty("--accent-grad", paintBackground(paint));
+      root.style.setProperty("--ring-1", paint.from);
+      root.style.setProperty("--ring-2", paint.mid ?? paint.solid);
+      root.style.setProperty("--ring-3", paint.to);
+
+      // Arka plan: varsayılan tema rengi, sade ya da seçilen renk
+      if (settings.background === "plain") {
+        root.dataset.bg = "plain";
+        BLOB_VARS.forEach((v) => root.style.removeProperty(v));
+        root.style.removeProperty("--blob-o");
+      } else if (settings.background === "theme") {
+        delete root.dataset.bg;
+        BLOB_VARS.forEach((v) => root.style.removeProperty(v));
+        root.style.removeProperty("--blob-o");
+      } else {
+        delete root.dataset.bg;
+        const p = resolvePaint(settings.background);
+        const tones = [p.from, p.to, p.mid ?? p.solid, p.solid];
+        BLOB_VARS.forEach((v, i) => root.style.setProperty(v, tones[i]));
+        // Seçilen arka plan fark edilsin diye biraz daha belirgin
+        root.style.setProperty("--blob-o", dark ? "0.8" : "0.85");
+      }
     };
+
     apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
-  }, [settings.theme, loaded]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    const root = document.documentElement;
-    const vars = ["--accent", "--accent-grad", "--ring-1", "--ring-2", "--ring-3"];
-    if (settings.accent === AURORA) {
-      vars.forEach((v) => root.style.removeProperty(v));
-    } else {
-      const c = settings.accent;
-      const light = `color-mix(in srgb, ${c} 60%, white)`;
-      root.style.setProperty("--accent", c);
-      root.style.setProperty("--accent-grad", `linear-gradient(135deg, ${light}, ${c})`);
-      root.style.setProperty("--ring-1", light);
-      root.style.setProperty("--ring-2", c);
-      root.style.setProperty("--ring-3", c);
-    }
-  }, [settings.accent, loaded]);
+  }, [settings.theme, settings.accent, settings.background, loaded]);
 }

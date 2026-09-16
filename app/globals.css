@@ -105,6 +105,7 @@ button:disabled { cursor: default; }
 .b2 { width: 440px; height: 440px; background: var(--blob-2); bottom: -160px; right: -120px; animation-delay: -7s; }
 .b3 { width: 380px; height: 380px; background: var(--blob-3); top: 38%; left: 52%; animation-delay: -13s; opacity: calc(var(--blob-o) * 0.7); }
 .b4 { width: 300px; height: 300px; background: var(--blob-4); top: 55%; left: -120px; animation-delay: -4s; opacity: calc(var(--blob-o) * 0.6); }
+:root[data-bg="plain"] .blob { display: none; }
 @keyframes float {
   to { transform: translate(60px, 70px) scale(1.15); }
 }
@@ -241,7 +242,10 @@ button:disabled { cursor: default; }
 .chip.on { background: var(--label); color: var(--bg); box-shadow: none; }
 .chip small { font-size: 12px; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .chip.ghost { padding: 0 11px; color: var(--label-2); }
-.dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+.dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+  background: var(--cg, var(--c, var(--accent)));
+}
 
 /* Hızlı ekleme */
 .add { --r: 99px; display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 16px; }
@@ -327,7 +331,11 @@ button:disabled { cursor: default; }
   color: transparent; transition: background 0.25s, border-color 0.25s, color 0.2s, transform 0.25s var(--spring);
 }
 .check:hover { border-color: var(--c, var(--accent)); }
-.check.on { background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); color: #fff; animation: check-pop 0.4s var(--spring); }
+.check.on {
+  background: var(--cg, var(--accent-grad)); border-color: transparent; color: #fff;
+  box-shadow: 0 0 0 1px var(--c, var(--accent)) inset;
+  animation: check-pop 0.4s var(--spring);
+}
 .check:active { transform: scale(0.8); }
 .check.small { width: 20px; height: 20px; }
 @keyframes check-pop { 50% { transform: scale(1.18); } }

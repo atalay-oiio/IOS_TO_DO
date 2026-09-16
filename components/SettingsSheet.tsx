@@ -2,13 +2,22 @@
 
 import { useRef, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
-import { ColorDots, Segmented, Switch } from "./ui";
+import { PaintDots, Segmented, Switch, type PaintOption } from "./ui";
 import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
-import { ACCENTS, AURORA, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
+import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
+import { DELAY_OPTIONS, type LockConfig } from "@/lib/lock";
+import { type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
-const AURORA_BG = "linear-gradient(135deg, #7cf8ff, #8b7bff 55%, #ff7ad9)";
+const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
+
+// Arka plan: varsayılan (temanın kendi rengi) ve sade seçenekleri + renkler
+const BACKGROUND_OPTIONS: PaintOption[] = [
+  { id: "theme", name: "Varsayılan", background: "linear-gradient(135deg, var(--blob-1), var(--blob-2))" },
+  { id: "plain", name: "Sade", background: "var(--fill-2)" },
+  ...PAINT_OPTIONS,
+];
 
 // Sunucuda bekleyen hatırlatmalar (kurulduğunu doğrulamak için)
 function ScheduledInfo() {
@@ -40,10 +49,19 @@ export function SettingsSheet({
   onClearCompleted,
   onDeleteAll,
   push,
+  lock,
 }: {
   open: boolean;
   onClose: () => void;
   push: ReturnType<typeof usePush>;
+  lock: {
+    cfg: LockConfig;
+    biometricOk: boolean;
+    setup: () => void;
+    disable: () => void;
+    setDelay: (ms: number) => void;
+    toggleBiometric: (on: boolean) => void;
+  };
   settings: Settings;
   setSettings: (patch: Partial<Settings>) => void;
   completedCount: number;
@@ -93,13 +111,26 @@ export function SettingsSheet({
               { value: "dark", label: "Koyu" },
             ]}
           />
-          <p className="pad-label">Vurgu rengi</p>
-          <ColorDots
+          <p className="pad-label">Vurgu rengi · {resolvePaint(settings.accent).name}</p>
+          <PaintDots
             label="Vurgu rengi"
-            colors={ACCENTS}
-            value={settings.accent}
+            options={PAINT_OPTIONS}
+            value={resolvePaint(settings.accent).id}
             onChange={(accent) => setSettings({ accent })}
-            render={(c) => (c === AURORA ? AURORA_BG : c)}
+          />
+          <p className="pad-label">
+            Arka plan ·{" "}
+            {settings.background === "theme"
+              ? "Varsayılan"
+              : settings.background === "plain"
+                ? "Sade"
+                : resolvePaint(settings.background).name}
+          </p>
+          <PaintDots
+            label="Arka plan"
+            options={BACKGROUND_OPTIONS}
+            value={settings.background}
+            onChange={(background) => setSettings({ background })}
           />
         </div>
 
@@ -213,6 +244,64 @@ export function SettingsSheet({
             />
           </div>
         </div>
+
+        <p className="group-label">Güvenlik</p>
+        <div className="group">
+          <div className="cell">
+            <span className="cell-icon" style={{ background: "#5E5CE6" }}>
+              <Icon name="lock" size={17} />
+            </span>
+            <div className="cell-text">
+              <span>Uygulama kilidi</span>
+              <small>{lock.cfg.enabled ? "Açık · PIN sorulur" : "Kapalı"}</small>
+            </div>
+            <Switch
+              label="Uygulama kilidi"
+              checked={lock.cfg.enabled}
+              onChange={(on) => (on ? lock.setup() : lock.disable())}
+            />
+          </div>
+          {lock.cfg.enabled && lock.biometricOk && (
+            <div className="cell">
+              <span className="cell-icon" style={{ background: "#30D158" }}>
+                <Icon name="fingerprint" size={17} />
+              </span>
+              <div className="cell-text">
+                <span>Parmak izi ile aç</span>
+                <small>Okunmazsa PIN sorulur</small>
+              </div>
+              <Switch
+                label="Parmak izi ile aç"
+                checked={!!lock.cfg.credentialId}
+                onChange={lock.toggleBiometric}
+              />
+            </div>
+          )}
+          {lock.cfg.enabled && (
+            <>
+              <div className="cell stack">
+                <div className="cell-text">
+                  <span>Kilitlenme süresi</span>
+                  <small>Uygulamadan çıktıktan ne kadar sonra kilitlensin</small>
+                </div>
+                <Segmented<number>
+                  label="Kilitlenme süresi"
+                  value={lock.cfg.delay}
+                  onChange={lock.setDelay}
+                  options={DELAY_OPTIONS}
+                />
+              </div>
+              <button type="button" className="cell action" onClick={lock.setup}>
+                <Icon name="pencil" size={19} />
+                <span>PIN&apos;i değiştir</span>
+              </button>
+            </>
+          )}
+        </div>
+        <p className="foot left">
+          Kilit ekranı uygulamayı gizler; veriler cihazda şifrelenmez. PIN&apos;i unutursan kilidi kaldırmak için
+          tarayıcıdan uygulama verilerini silmen gerekir.
+        </p>
 
         <p className="group-label">Veriler</p>
         <div className="group">

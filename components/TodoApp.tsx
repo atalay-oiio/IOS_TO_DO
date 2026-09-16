@@ -24,6 +24,16 @@ import { Confetti, ProgressRing } from "./Decor";
 import { dueGroup, formatDue, headerDate, isOverdue, todayKey } from "@/lib/date";
 import { makeTodo, normalizeData, useApplyTheme, useTodoStore } from "@/lib/store";
 import { parseQuick } from "@/lib/parse";
+import { paintStyle, resolvePaint } from "@/lib/paint";
+import { LockScreen } from "./LockScreen";
+import {
+  biometricAvailable,
+  DEFAULT_LOCK,
+  loadLock,
+  registerBiometric,
+  saveLock,
+  type LockConfig,
+} from "@/lib/lock";
 import { usePush } from "@/lib/push-client";
 import { REMINDER_EVENT, reminderPayload, useReminders, type ReminderEvent } from "@/lib/reminders";
 import { PRIORITY_LABELS, VIEW_TITLES, type SortMode, type Todo, type TodoList, type View } from "@/lib/types";
@@ -71,6 +81,38 @@ export default function TodoApp() {
   const push = usePush();
   const todosRef = useRef(todos);
   todosRef.current = todos;
+
+  const [lock, setLockState] = useState<LockConfig>(DEFAULT_LOCK);
+  const [locked, setLocked] = useState(false);
+  const [pinSetup, setPinSetup] = useState(false);
+  const [bioOk, setBioOk] = useState(false);
+
+  // Kilit ayarını oku ve kilitliyse hemen kilit ekranını göster
+  useEffect(() => {
+    const cfg = loadLock();
+    setLockState(cfg);
+    setLocked(cfg.enabled && !!cfg.pin);
+    biometricAvailable().then(setBioOk);
+  }, []);
+
+  const updateLock = (patch: Partial<LockConfig>) =>
+    setLockState((cfg) => {
+      const next = { ...cfg, ...patch };
+      saveLock(next);
+      return next;
+    });
+
+  // Uygulamadan çıkıp dönünce seçilen süreden sonra tekrar kilitle
+  useEffect(() => {
+    if (!lock.enabled || !lock.pin) return;
+    let hiddenAt = 0;
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") hiddenAt = Date.now();
+      else if (hiddenAt && Date.now() - hiddenAt >= lock.delay) setLocked(true);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [lock.enabled, lock.pin, lock.delay]);
 
   // Gecikmiş/bugün etiketleri güncel kalsın
   useEffect(() => {
@@ -583,7 +625,7 @@ export default function TodoApp() {
             className={`chip ${listFilter === l.id ? "on" : ""}`}
             onClick={() => setListFilter(listFilter === l.id ? null : l.id)}
           >
-            <i className="dot" style={{ background: l.color }} />
+            <i className="dot" style={paintStyle(l.color)} />
             {l.name}
             {listCounts[l.id] ? <small>{listCounts[l.id]}</small> : null}
           </button>
@@ -594,7 +636,10 @@ export default function TodoApp() {
       </nav>
 
       <form className="add material" onSubmit={addQuick}>
-        <span className="add-circle" style={{ borderColor: listById.get(quick.listId ?? defaultListId)?.color }} />
+        <span
+          className="add-circle"
+          style={{ borderColor: resolvePaint(listById.get(quick.listId ?? defaultListId)?.color).solid }}
+        />
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -627,7 +672,7 @@ export default function TodoApp() {
           ) : null}
           {parsed.listId && (
             <span className="pchip">
-              <i className="dot" style={{ background: listById.get(parsed.listId)?.color }} />
+              <i className="dot" style={paintStyle(listById.get(parsed.listId)?.color)} />
               {listById.get(parsed.listId)?.name}
             </span>
           )}
@@ -788,6 +833,19 @@ export default function TodoApp() {
       <SettingsSheet
         open={settingsOpen}
         push={push}
+        lock={{
+          cfg: lock,
+          biometricOk: bioOk,
+          setup: () => setPinSetup(true),
+          disable: () => updateLock({ enabled: false, pin: null, credentialId: null }),
+          setDelay: (delay) => updateLock({ delay }),
+          toggleBiometric: async (on) => {
+            if (!on) return updateLock({ credentialId: null });
+            const id = await registerBiometric();
+            if (id) updateLock({ credentialId: id });
+            else notify("Parmak izi kaydedilemedi, PIN ile açabilirsin");
+          },
+        }}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         setSettings={setSettings}
@@ -859,6 +917,20 @@ export default function TodoApp() {
       >
         <Confetti />
       </Alert>
+
+      {locked && <LockScreen mode="unlock" cfg={lock} onUnlock={() => setLocked(false)} />}
+      {pinSetup && (
+        <LockScreen
+          mode="set"
+          cfg={lock}
+          onCancel={() => setPinSetup(false)}
+          onDone={(pin) => {
+            updateLock({ enabled: true, pin });
+            setPinSetup(false);
+            notify("Uygulama kilidi açıldı");
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -6,6 +6,7 @@ import { Segmented, Switch } from "./ui";
 import { Icon } from "./icons";
 import { addDays, formatDue, nextMonday, nextWeekend, todayKey } from "@/lib/date";
 import { makeTodo } from "@/lib/store";
+import { paintStyle } from "@/lib/paint";
 import { ALERT_OPTIONS, newId, PRIORITY_LABELS, type Priority, type Todo, type TodoList } from "@/lib/types";
 
 type Draft = Pick<Todo, "text" | "notes" | "due" | "time" | "alert" | "priority" | "flagged" | "listId" | "subtasks">;
@@ -264,7 +265,7 @@ export function TaskSheet({
                   className={`chip ${d.listId === l.id ? "on" : ""}`}
                   onClick={() => set({ listId: l.id })}
                 >
-                  <i className="dot" style={{ background: l.color }} />
+                  <i className="dot" style={paintStyle(l.color)} />
                   {l.name}
                 </button>
               ))}
