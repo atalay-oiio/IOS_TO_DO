@@ -12,13 +12,6 @@ import { type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
 
-// Arka plan: varsayılan (temanın kendi rengi) ve sade seçenekleri + renkler
-const BACKGROUND_OPTIONS: PaintOption[] = [
-  { id: "theme", name: "Varsayılan", background: "linear-gradient(135deg, var(--blob-1), var(--blob-2))" },
-  { id: "plain", name: "Sade", background: "var(--fill-2)" },
-  ...PAINT_OPTIONS,
-];
-
 // Sunucuda bekleyen hatırlatmalar (kurulduğunu doğrulamak için)
 function ScheduledInfo() {
   const s = scheduledSummary();
@@ -117,20 +110,6 @@ export function SettingsSheet({
             options={PAINT_OPTIONS}
             value={resolvePaint(settings.accent).id}
             onChange={(accent) => setSettings({ accent })}
-          />
-          <p className="pad-label">
-            Arka plan ·{" "}
-            {settings.background === "theme"
-              ? "Varsayılan"
-              : settings.background === "plain"
-                ? "Sade"
-                : resolvePaint(settings.background).name}
-          </p>
-          <PaintDots
-            label="Arka plan"
-            options={BACKGROUND_OPTIONS}
-            value={settings.background}
-            onChange={(background) => setSettings({ background })}
           />
         </div>
 

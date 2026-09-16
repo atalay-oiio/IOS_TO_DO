@@ -248,9 +248,7 @@ export function useTodoStore() {
   };
 }
 
-const BLOB_VARS = ["--blob-1", "--blob-2", "--blob-3", "--blob-4"];
-
-// Temayı, vurgu rengini ve arka planı <html>'e uygular
+// Temayı ve vurgu rengini <html>'e uygular (arka plan her zaman temanın kendi rengi)
 export function useApplyTheme(settings: Settings, loaded: boolean) {
   useEffect(() => {
     if (!loaded) return;
@@ -271,28 +269,10 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
       root.style.setProperty("--ring-1", paint.from);
       root.style.setProperty("--ring-2", paint.mid ?? paint.solid);
       root.style.setProperty("--ring-3", paint.to);
-
-      // Arka plan: varsayılan tema rengi, sade ya da seçilen renk
-      if (settings.background === "plain") {
-        root.dataset.bg = "plain";
-        BLOB_VARS.forEach((v) => root.style.removeProperty(v));
-        root.style.removeProperty("--blob-o");
-      } else if (settings.background === "theme") {
-        delete root.dataset.bg;
-        BLOB_VARS.forEach((v) => root.style.removeProperty(v));
-        root.style.removeProperty("--blob-o");
-      } else {
-        delete root.dataset.bg;
-        const p = resolvePaint(settings.background);
-        const tones = [p.from, p.to, p.mid ?? p.solid, p.solid];
-        BLOB_VARS.forEach((v, i) => root.style.setProperty(v, tones[i]));
-        // Seçilen arka plan fark edilsin diye biraz daha belirgin
-        root.style.setProperty("--blob-o", dark ? "0.8" : "0.85");
-      }
     };
 
     apply();
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
-  }, [settings.theme, settings.accent, settings.background, loaded]);
+  }, [settings.theme, settings.accent, loaded]);
 }

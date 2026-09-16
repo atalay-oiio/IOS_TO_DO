@@ -29,7 +29,6 @@ export type ThemeMode = "system" | "light" | "dark";
 export type Settings = {
   theme: ThemeMode;
   accent: string; // paint id ya da eski kayıtlardaki "#rrggbb"
-  background: string; // "theme" (varsayılan) | "plain" | paint id
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;
@@ -60,7 +59,6 @@ export const VIEW_TITLES: Record<View, string> = {
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   accent: DEFAULT_PAINT,
-  background: "theme",
   showCompleted: true,
   confirmDelete: true,
   celebrate: true,

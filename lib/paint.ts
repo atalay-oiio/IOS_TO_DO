@@ -31,6 +31,10 @@ export const GRADIENTS: Paint[] = [
   { id: "lavender", name: "Lavanta", from: "#D6A8FF", mid: "#A77BFF", to: "#6A5AE0", solid: "#A77BFF", solidLight: "#7B4FE0" },
   { id: "peach", name: "Şeftali", from: "#FFD59E", mid: "#FF9E8A", to: "#FF6E9C", solid: "#FF9E8A", solidLight: "#E05A78" },
   { id: "midnight", name: "Gece", from: "#6E8BFF", mid: "#7C5CFF", to: "#B14BFF", solid: "#7C5CFF", solidLight: "#5A3ADB" },
+  { id: "lemon", name: "Limon", from: "#FFE066", mid: "#DDE85C", to: "#9BE15D", solid: "#C3DE4F", solidLight: "#6E8F17" },
+  { id: "copper", name: "Bakır", from: "#FFD98E", mid: "#E8A23C", to: "#B4592A", solid: "#E09A3C", solidLight: "#A25A1C" },
+  { id: "steel", name: "Çelik", from: "#D6DEE8", mid: "#9AA8BC", to: "#5F6E85", solid: "#94A3B8", solidLight: "#56657E" },
+  { id: "twilight", name: "Alacakaranlık", from: "#FFA76B", mid: "#D06CC8", to: "#7A5CFF", solid: "#C06BD8", solidLight: "#7E3FAF" },
 ];
 
 export const PAINTS = [...GRADIENTS, ...SOLIDS];
