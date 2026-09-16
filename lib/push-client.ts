@@ -19,8 +19,9 @@ export function registerSW() {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") {
     registration = Promise.resolve(null);
   } else {
+    // Sürüm numarası adreste: yeni yayında tarayıcı yeni service worker'ı kurar
     registration = navigator.serviceWorker
-      .register("/sw.js")
+      .register(`/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}`)
       .then(() => navigator.serviceWorker.ready)
       .catch(() => null);
   }

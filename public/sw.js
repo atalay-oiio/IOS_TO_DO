@@ -1,5 +1,7 @@
 /* Glass Todo service worker — çevrimdışı çalışma + hatırlatma bildirimleri */
-const CACHE = "glass-todo-v1";
+// Sürüm, kayıt adresinden gelir (/sw.js?v=...): her yayında önbellek tazelenir
+const VERSION = new URL(self.location.href).searchParams.get("v") || "v1";
+const CACHE = `glass-todo-${VERSION}`;
 const EXTRA = ["/manifest.webmanifest", "/icon", "/apple-icon", "/pwa/192", "/pwa/512", "/badge"];
 const ASSET_RE = /(?:\/_next\/)?static\/[^"'\s)\\]+/g;
 
