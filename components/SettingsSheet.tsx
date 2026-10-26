@@ -8,6 +8,7 @@ import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
 import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
 import { DELAY_OPTIONS, pinLength, type LockConfig } from "@/lib/lock";
+import { hapticsSupported } from "@/lib/haptics";
 import { GLASS_LABELS, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
@@ -238,6 +239,15 @@ export function SettingsSheet({
               onChange={(celebrate) => setSettings({ celebrate })}
             />
           </div>
+          {open && hapticsSupported() && (
+            <div className="cell">
+              <div className="cell-text">
+                <span>Titreşim</span>
+                <small>Görev tamamlarken, kaydırırken ve seçim yaparken hafif titreşim</small>
+              </div>
+              <Switch label="Titreşim" checked={settings.haptics} onChange={(haptics) => setSettings({ haptics })} />
+            </div>
+          )}
         </div>
 
         <p className="group-label">Güvenlik</p>

@@ -36,6 +36,7 @@ export type Settings = {
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;
+  haptics: boolean; // Android'de dokunuşlarda hafif titreşim
   sort: SortMode;
   reminders: boolean;
   smartAdd: boolean;
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showCompleted: true,
   confirmDelete: true,
   celebrate: true,
+  haptics: true,
   sort: "manual",
   reminders: true,
   smartAdd: true,

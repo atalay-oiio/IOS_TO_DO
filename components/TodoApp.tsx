@@ -37,6 +37,7 @@ import {
 import { usePush } from "@/lib/push-client";
 import { REMINDER_EVENT, reminderPayload, useReminders, type ReminderEvent } from "@/lib/reminders";
 import { useUpdateCheck } from "@/lib/update";
+import { haptic, setHaptics } from "@/lib/haptics";
 import {
   PRIORITY_LABELS,
   REPEAT_LABELS,
@@ -66,6 +67,7 @@ export default function TodoApp() {
   const store = useTodoStore();
   const { loaded, todos, lists, settings, setSettings } = store;
   useApplyTheme(settings, loaded);
+  useEffect(() => setHaptics(settings.haptics), [settings.haptics]);
 
   const [view, setView] = useState<View>("all");
   const [tabMoves, setTabMoves] = useState(0); // sekme göstergesinin esneme animasyonunu yeniden başlatır
@@ -320,6 +322,7 @@ export default function TodoApp() {
   const toggle = (id: string) => {
     const t = todos.find((x) => x.id === id);
     if (!t || checking.has(id)) return;
+    haptic(t.done ? "select" : "tap");
     if (!t.done && t.repeat && t.due) {
       // Onay işareti bir an görünsün, sonra görev sonraki tarihe geçsin
       setChecking((s) => new Set(s).add(id));
@@ -335,7 +338,11 @@ export default function TodoApp() {
     // Kapsamdaki son görev tamamlanınca kutla
     if (!t.done && settings.celebrate && scope.some((x) => x.id === id)) {
       const remaining = scope.filter((x) => !x.done && x.id !== id).length;
-      if (remaining === 0) setTimeout(() => setCelebrate(true), 450);
+      if (remaining === 0)
+        setTimeout(() => {
+          haptic("success");
+          setCelebrate(true);
+        }, 450);
     }
   };
 
@@ -343,6 +350,7 @@ export default function TodoApp() {
     const index = todos.findIndex((t) => t.id === id);
     const todo = todos[index];
     if (!todo) return;
+    haptic("tap");
     store.remove(id);
     notify(`“${todo.text}” silindi`, () => store.restore(todo, index));
   };
@@ -528,7 +536,9 @@ export default function TodoApp() {
   );
 
   const onDragEnd = ({ active: a, over }: DragEndEvent) => {
-    if (over && a.id !== over.id) store.reorder(String(a.id), String(over.id));
+    if (!over || a.id === over.id) return;
+    haptic("select");
+    store.reorder(String(a.id), String(over.id));
   };
 
   const menuItems: MenuItem[] = [
@@ -577,11 +587,15 @@ export default function TodoApp() {
       }}
       onCancel={() => setEditingId(null)}
       onInfo={() => setTaskSheet({ open: true, todo: t })}
-      onFlag={() => store.update(t.id, { flagged: !t.flagged })}
+      onFlag={() => {
+        haptic("select");
+        store.update(t.id, { flagged: !t.flagged });
+      }}
       onDelete={() => requestDelete(t.id)}
-      onSubtask={(sid) =>
-        store.update(t.id, { subtasks: t.subtasks.map((s) => (s.id === sid ? { ...s, done: !s.done } : s)) })
-      }
+      onSubtask={(sid) => {
+        haptic("select");
+        store.update(t.id, { subtasks: t.subtasks.map((s) => (s.id === sid ? { ...s, done: !s.done } : s)) });
+      }}
     />
   );
 
@@ -773,6 +787,7 @@ export default function TodoApp() {
         sensors={sensors}
         collisionDetection={closestCenter}
         modifiers={[restrictToVerticalAxis]}
+        onDragStart={() => haptic("tap")}
         onDragEnd={onDragEnd}
       >
         {view === "planned" ? (

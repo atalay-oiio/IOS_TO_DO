@@ -5,6 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "./icons";
 import { formatDue, isOverdue } from "@/lib/date";
+import { haptic } from "@/lib/haptics";
 import { paintStyle } from "@/lib/paint";
 import { REPEAT_LABELS, type Todo, type TodoList } from "@/lib/types";
 
@@ -56,6 +57,7 @@ export function TaskRow({
   const [swiping, setSwiping] = useState(false);
   const rowRef = useRef<HTMLLIElement | null>(null);
   const swipe = useRef<{ x: number; y: number; base: number; active: boolean } | null>(null);
+  const armed = useRef<"done" | "delete" | null>(null); // kaydırma eşiği geçildi mi (bir kez titrer)
   const suppressClick = useRef(false);
   const draggingRef = useRef(isDragging);
   draggingRef.current = isDragging;
@@ -107,12 +109,19 @@ export function TaskRow({
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     }
     const width = rowRef.current?.offsetWidth ?? 360;
-    setOffset(Math.max(-width, Math.min(120, s.base + dx)));
+    const next = Math.max(-width, Math.min(120, s.base + dx));
+    const state = next > 70 ? "done" : next < -width * 0.6 ? "delete" : null;
+    if (state !== armed.current) {
+      if (state) haptic("select");
+      armed.current = state;
+    }
+    setOffset(next);
   };
 
   const onPointerUp = () => {
     const s = swipe.current;
     swipe.current = null;
+    armed.current = null;
     if (!s?.active) return;
     setSwiping(false);
     suppressClick.current = true;

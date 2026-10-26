@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { haptic } from "@/lib/haptics";
 
 export function Switch({
   checked,
@@ -18,7 +19,10 @@ export function Switch({
       aria-checked={checked}
       aria-label={label}
       className={`switch ${checked ? "on" : ""}`}
-      onClick={() => onChange(!checked)}
+      onClick={() => {
+        haptic("select");
+        onChange(!checked);
+      }}
     >
       <span className="knob" />
     </button>
@@ -51,7 +55,10 @@ export function Segmented<T extends string | number>({
           type="button"
           role="radio"
           aria-checked={o.value === value}
-          onClick={() => onChange(o.value)}
+          onClick={() => {
+            if (o.value !== value) haptic("select");
+            onChange(o.value);
+          }}
         >
           {o.label}
         </button>
@@ -93,7 +100,10 @@ export function Slider({
         disabled={disabled}
         aria-label={label}
         style={{ "--p": `${((value - min) / (max - min)) * 100}%` } as CSSProperties}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(e) => {
+          haptic("select"); // her adımda bir tık
+          onChange(Number(e.target.value));
+        }}
       />
       <span className="slider-end">{end}</span>
     </div>
@@ -125,7 +135,10 @@ export function PaintDots({
           title={o.name}
           className={`color-dot ${o.id === value ? "on" : ""}`}
           style={{ background: o.background }}
-          onClick={() => onChange(o.id)}
+          onClick={() => {
+            if (o.id !== value) haptic("select");
+            onChange(o.id);
+          }}
         />
       ))}
     </div>

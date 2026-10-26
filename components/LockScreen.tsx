@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "./icons";
+import { haptic } from "@/lib/haptics";
 import {
   checkPin,
   lockedFor,
@@ -74,6 +75,7 @@ export function LockScreen(props: Props) {
         return props.onUnlock(cfg.pin && pinOutdated(cfg.pin) ? await makePin(code) : undefined);
       }
       props.onFail();
+      haptic("error");
       setError("Yanlış PIN");
       setEntry("");
       setBusy(false);
@@ -87,6 +89,7 @@ export function LockScreen(props: Props) {
       return;
     }
     if (first !== code) {
+      haptic("error");
       setError("Kodlar eşleşmedi");
       setFirst(null);
       setEntry("");
@@ -98,6 +101,7 @@ export function LockScreen(props: Props) {
 
   const press = (digit: string) => {
     if (busy || waiting || entry.length >= length) return;
+    haptic("select");
     const next = entry + digit;
     setEntry(next);
     setError("");
