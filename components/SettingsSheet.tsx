@@ -54,6 +54,7 @@ export function SettingsSheet({
     setup: () => void;
     disable: () => void;
     setDelay: (ms: number) => void;
+    setHideContent: (on: boolean) => void;
     toggleBiometric: (on: boolean) => void;
   };
   settings: Settings;
@@ -284,6 +285,20 @@ export function SettingsSheet({
           )}
           {lock.cfg.enabled && (
             <>
+              <div className="cell">
+                <span className="cell-icon" style={{ background: "#8E8E93" }}>
+                  <Icon name="eyeOff" size={17} />
+                </span>
+                <div className="cell-text">
+                  <span>Bildirimde içeriği gizle</span>
+                  <small>Görev adı yerine “Bir hatırlatman var” yazar</small>
+                </div>
+                <Switch
+                  label="Bildirimde içeriği gizle"
+                  checked={lock.cfg.hideContent}
+                  onChange={lock.setHideContent}
+                />
+              </div>
               <div className="cell stack">
                 <div className="cell-text">
                   <span>Kilitlenme süresi</span>

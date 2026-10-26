@@ -209,14 +209,17 @@ export default function TodoApp() {
   }, []);
 
   // Hatırlatmalar: uygulama açıkken şerit + (sunucu yoksa) yerel bildirim; sunucu varsa push zamanlanır
+  // Uygulama kilidi açıksa (ve ayar açıksa) bildirimde görev adı görünmez; uygulama içi şerit görünür
+  const hideContent = lock.enabled && !!lock.pin && lock.hideContent;
   useReminders({
     todos: loaded ? todos : null,
     enabled: settings.reminders,
     subscription: push.state.subscription,
+    hideContent,
     onFire: (t, viaPush) => {
       const p = reminderPayload(t);
       setBanner({ id: t.id, title: p.title, body: p.body });
-      if (!viaPush) push.showLocal(p);
+      if (!viaPush) push.showLocal(hideContent ? reminderPayload(t, true) : p);
     },
   });
 
@@ -938,6 +941,7 @@ export default function TodoApp() {
           setup: () => setPinSetup(true),
           disable: () => updateLock({ enabled: false, pin: null, credentialId: null, fails: 0, lastFail: 0 }),
           setDelay: (delay) => updateLock({ delay }),
+          setHideContent: (hideContent) => updateLock({ hideContent }),
           toggleBiometric: async (on) => {
             if (!on) return updateLock({ credentialId: null });
             const id = await registerBiometric();

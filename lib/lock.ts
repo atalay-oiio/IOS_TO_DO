@@ -11,6 +11,7 @@ export type LockConfig = {
   delay: number; // arka plandan dönüşte kaç ms sonra kilitlensin
   fails: number; // art arda yanlış PIN sayısı
   lastFail: number; // son yanlış denemenin zamanı (ms)
+  hideContent: boolean; // kilit açıkken bildirimde görev adı yerine genel metin
 };
 
 const KEY = "glass-todo:lock";
@@ -22,6 +23,7 @@ export const DEFAULT_LOCK: LockConfig = {
   delay: 0,
   fails: 0,
   lastFail: 0,
+  hideContent: true,
 };
 
 export const pinLength = (pin: PinHash | null) => pin?.len ?? 4;

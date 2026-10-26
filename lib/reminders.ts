@@ -24,7 +24,9 @@ export function reminderAt(t: Todo) {
 
 const left = (min: number) => (min < 60 ? `${min} dk` : min < 1440 ? `${min / 60} saat` : `${min / 1440} gün`);
 
-export function reminderPayload(t: Todo): NotifyPayload {
+// hide: uygulama kilidi açıkken bildirimde görev adı görünmez (yine "Tamamlandı" ile kapatılabilir)
+export function reminderPayload(t: Todo, hide = false): NotifyPayload {
+  if (hide) return { title: "Glass Todo", body: "Bir hatırlatman var", tag: `todo-${t.id}`, id: t.id };
   const when = formatDue(t.due!, t.time);
   const note = t.notes.split("\n")[0].slice(0, 80);
   const body = (t.alert ? `${when} · ${left(t.alert)} kaldı` : when) + (note ? `\n${note}` : "");
@@ -78,7 +80,7 @@ const post = async (path: string, body: unknown) => {
 };
 
 // Sunucudaki zamanlanmış bildirimleri görevlerle eşitle (değişenleri iptal et, yenileri zamanla)
-async function syncServer(todos: Todo[], enabled: boolean, sub: PushSubscriptionJSON) {
+async function syncServer(todos: Todo[], enabled: boolean, sub: PushSubscriptionJSON, hide: boolean) {
   if (!navigator.onLine) return;
   const store = load();
   const now = Date.now();
@@ -94,7 +96,8 @@ async function syncServer(todos: Todo[], enabled: boolean, sub: PushSubscription
     for (const t of todos) {
       const at = reminderAt(t);
       if (at !== null && at > now + 3000 && at - now < SERVER_WINDOW)
-        want.set(t.id, { at, key: `${at}|${t.alert}|${t.text}|${t.notes.slice(0, 80)}`, todo: t });
+        // Gizliyken başlık bildirime girmez; değişince yeniden zamanlamaya gerek yok
+        want.set(t.id, { at, key: `${at}|${t.alert}|${hide ? "gizli" : `${t.text}|${t.notes.slice(0, 80)}`}`, todo: t });
     }
 
   for (const [id, e] of Object.entries(store.items)) {
@@ -109,7 +112,7 @@ async function syncServer(todos: Todo[], enabled: boolean, sub: PushSubscription
 
   for (const [id, w] of want) {
     if (store.items[id]) continue;
-    const res = await post("/api/push/schedule", { subscription: sub, at: w.at, ...reminderPayload(w.todo) });
+    const res = await post("/api/push/schedule", { subscription: sub, at: w.at, ...reminderPayload(w.todo, hide) });
     if (res.ok && res.data?.messageId) {
       store.items[id] = { at: w.at, key: w.key, messageId: res.data.messageId };
       store.lastError = undefined;
@@ -143,17 +146,19 @@ export function useReminders({
   todos,
   enabled,
   subscription,
+  hideContent,
   onFire,
 }: {
   todos: Todo[] | null; // null = henüz yüklenmedi (boş listeyle her şeyi iptal etmesin)
   enabled: boolean;
   subscription: PushSubscriptionJSON | null;
+  hideContent: boolean; // bildirimde görev adı gizlensin mi
   onFire: (todo: Todo, viaPush: boolean) => void;
 }) {
   const fire = useRef(onFire);
   fire.current = onFire;
-  const latest = useRef({ todos, enabled });
-  latest.current = { todos, enabled };
+  const latest = useRef({ todos, enabled, hideContent });
+  latest.current = { todos, enabled, hideContent };
 
   // Uygulama açıkken: yerel zamanlayıcılar (uygulama içi şerit + sunucu yoksa sistem bildirimi)
   useEffect(() => {
@@ -170,16 +175,16 @@ export function useReminders({
   // Sunucu: görevler değişince hemen eşitle (kısa gecikme art arda değişiklikleri birleştirir)
   useEffect(() => {
     if (!subscription || !todos) return;
-    const t = setTimeout(() => queue(() => syncServer(todos, enabled, subscription)), 300);
+    const t = setTimeout(() => queue(() => syncServer(todos, enabled, subscription, hideContent)), 300);
     return () => clearTimeout(t);
-  }, [todos, enabled, subscription]);
+  }, [todos, enabled, subscription, hideContent]);
 
   // Uygulama arka plana alınırken/kapatılırken, geri dönünce, çevrimiçi olunca ve yarım saatte bir
   useEffect(() => {
     if (!subscription) return;
     const run = () => {
-      const { todos: list, enabled: on } = latest.current;
-      if (list) queue(() => syncServer(list, on, subscription));
+      const { todos: list, enabled: on, hideContent: hide } = latest.current;
+      if (list) queue(() => syncServer(list, on, subscription, hide));
     };
     window.addEventListener("online", run);
     window.addEventListener("pagehide", run);
