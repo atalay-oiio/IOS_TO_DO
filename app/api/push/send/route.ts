@@ -1,4 +1,13 @@
-import { parsePayload, parseSubscription, pushConfigured, receiver, sendPush } from "@/lib/push-server";
+import {
+  parsePayload,
+  parseSubscription,
+  pushConfigured,
+  receiver,
+  sendPush,
+  SEND_PATH,
+  signedPath,
+  unseal,
+} from "@/lib/push-server";
 
 // Yalnızca QStash çağırır (imza doğrulanır); telefona anlık bildirimi gönderir.
 export async function POST(req: Request) {
@@ -8,11 +17,15 @@ export async function POST(req: Request) {
   const valid = await receiver()
     .verify({ signature, body: raw, clockTolerance: 30 })
     .catch(() => false);
-  if (!valid) return new Response("invalid signature", { status: 401 });
+  // İmza bu adres için verilmiş olmalı
+  if (!valid || signedPath(signature) !== SEND_PATH) return new Response("invalid signature", { status: 401 });
 
-  const data = JSON.parse(raw) as Record<string, unknown>;
-  const subscription = parseSubscription(data.subscription);
-  if (!subscription) return new Response("bad subscription"); // tekrar denemeye gerek yok
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = unseal(JSON.parse(raw) as Record<string, unknown>);
+  } catch {}
+  const subscription = parseSubscription(data?.subscription);
+  if (!data || !subscription) return new Response("bad message"); // tekrar denemeye gerek yok
 
   try {
     await sendPush(subscription, { ...parsePayload(data), snooze: true }, new URL(req.url).origin);

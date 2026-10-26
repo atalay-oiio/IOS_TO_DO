@@ -1,11 +1,21 @@
-import { parsePayload, parseSubscription, pushConfigured, qstash } from "@/lib/push-server";
+import {
+  fromOurApp,
+  parsePayload,
+  parseSubscription,
+  pushConfigured,
+  qstash,
+  readJson,
+  seal,
+  SEND_PATH,
+} from "@/lib/push-server";
 
 // Hatırlatmayı QStash'e bırakır; zamanı gelince QStash /api/push/send'i çağırır.
 const MAX_AHEAD = 7 * 24 * 3_600_000;
 
 export async function POST(req: Request) {
   if (!pushConfigured()) return Response.json({ error: "not-configured" }, { status: 503 });
-  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!fromOurApp(req)) return Response.json({ error: "forbidden" }, { status: 403 });
+  const body = await readJson(req);
   const subscription = parseSubscription(body?.subscription);
   const at = Number(body?.at);
   if (!body || !subscription || !Number.isFinite(at) || at > Date.now() + MAX_AHEAD)
@@ -13,8 +23,8 @@ export async function POST(req: Request) {
 
   try {
     const res = await qstash().publishJSON({
-      url: new URL("/api/push/send", req.url).toString(),
-      body: { subscription, ...parsePayload(body) },
+      url: new URL(SEND_PATH, req.url).toString(),
+      body: seal({ subscription, ...parsePayload(body) }),
       notBefore: Math.max(Math.floor(at / 1000), Math.floor(Date.now() / 1000)),
       retries: 3,
     });

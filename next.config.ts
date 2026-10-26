@@ -9,6 +9,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Temel güvenlik başlıkları: uygulama (PIN ekranı dahil) başka bir sitenin içine gömülemez
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        ],
+      },
+      {
         // Service worker her açılışta güncellik kontrolü yapabilsin
         source: "/sw.js",
         headers: [
