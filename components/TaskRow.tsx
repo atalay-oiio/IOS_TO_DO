@@ -6,7 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "./icons";
 import { formatDue, isOverdue } from "@/lib/date";
 import { paintStyle } from "@/lib/paint";
-import type { Todo, TodoList } from "@/lib/types";
+import { REPEAT_LABELS, type Todo, type TodoList } from "@/lib/types";
 
 const ACTIONS_W = 144; // sola kaydırınca açılan iki butonun genişliği
 
@@ -16,6 +16,7 @@ type Props = {
   showList: boolean;
   sortable: boolean;
   editing: boolean;
+  checking?: boolean; // tekrarlayan görev tamamlandı: sonraki tarihe geçmeden önce onay bir an görünür
   onToggle: () => void;
   onEdit: () => void;
   onSave: (text: string) => void;
@@ -31,6 +32,7 @@ export function TaskRow({
   showList,
   sortable,
   editing,
+  checking,
   onToggle,
   onEdit,
   onSave,
@@ -190,7 +192,7 @@ export function TaskRow({
       >
         <button
           type="button"
-          className={`check ${todo.done ? "on" : ""}`}
+          className={`check ${todo.done || checking ? "on" : ""}`}
           style={list ? paintStyle(list.color) : undefined}
           onClick={onToggle}
           aria-label={todo.done ? "Tamamlanmadı olarak işaretle" : "Tamamlandı olarak işaretle"}
@@ -236,6 +238,11 @@ export function TaskRow({
                 <span className={`meta ${overdue ? "overdue" : ""}`}>
                   <Icon name="calendar" size={13} stroke={2.2} />
                   {formatDue(todo.due, todo.time)}
+                  {todo.repeat && (
+                    <span className="meta-icon" role="img" aria-label={REPEAT_LABELS[todo.repeat]} title={REPEAT_LABELS[todo.repeat]}>
+                      <Icon name="repeat" size={12} stroke={2.2} />
+                    </span>
+                  )}
                   {todo.time && todo.alert !== null && !todo.done && <Icon name="bell" size={12} stroke={2.2} />}
                 </span>
               )}

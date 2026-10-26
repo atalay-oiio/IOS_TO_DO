@@ -4,6 +4,8 @@ export type Priority = 0 | 1 | 2 | 3;
 
 export type Subtask = { id: string; text: string; done: boolean };
 
+export type Repeat = "daily" | "weekdays" | "weekly" | "monthly" | "yearly";
+
 export type Todo = {
   id: string;
   text: string;
@@ -12,6 +14,7 @@ export type Todo = {
   due?: string; // YYYY-MM-DD (yerel saat)
   time?: string; // HH:mm
   alert: number | null; // hatırlatma: saatten kaç dakika önce (null = yok)
+  repeat?: Repeat; // tamamlanınca bir sonraki tarihe geçer (tarih gerekir)
   priority: Priority;
   flagged: boolean;
   listId: string;
@@ -47,6 +50,14 @@ export const ALERT_OPTIONS: { value: number | null; label: string }[] = [
   { value: 60, label: "1 saat önce" },
   { value: 1440, label: "1 gün önce" },
 ];
+
+export const REPEAT_LABELS: Record<Repeat, string> = {
+  daily: "Her gün",
+  weekdays: "Hafta içi",
+  weekly: "Her hafta",
+  monthly: "Her ay",
+  yearly: "Her yıl",
+};
 
 export const PRIORITY_LABELS = ["Yok", "Düşük", "Orta", "Yüksek"] as const;
 

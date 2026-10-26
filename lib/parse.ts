@@ -1,6 +1,7 @@
 // Doğal dille hızlı ekleme: "yarın 15:00 toplantı !! #iş" → başlık + tarih + saat + öncelik + liste
-import { toKey } from "./date";
-import type { Priority, TodoList } from "./types";
+// "her gün 08:00 ilaç", "her pazartesi toplantı" → tekrarlayan görev
+import { nextDue, toKey } from "./date";
+import type { Priority, Repeat, TodoList } from "./types";
 
 export type Parsed = {
   text: string;
@@ -8,6 +9,7 @@ export type Parsed = {
   time?: string;
   priority?: Priority;
   listId?: string;
+  repeat?: Repeat;
   found: boolean;
 };
 
@@ -48,6 +50,12 @@ const RX = {
   prio: re("(?<!\\S)(!{1,3})(?!\\S)"),
   prioTail: re("(?<=[\\p{L}\\p{N}])(!{2,3})(?!\\S)"),
   list: re("(?<!\\S)#([\\p{L}\\p{N}_-]{1,30})"),
+  // Tekrar: "hafta içi her gün", "her ayın 15'i", "her pazartesi", "her sabah", "her gün / hafta / ay / yıl"
+  repeatWeekdays: re(`${B}(?:her\\s+hafta\\s*içi|hafta\\s*içi\\s+her\\s+gün|hafta\\s*içleri)${E}`),
+  repeatMonthDay: re(`${B}her\\s+ayın\\s+(\\d{1,2})(?:['’]?\\p{L}+)?${E}`),
+  repeatWeekday: re(`${B}her\\s+(${DAYS})(?:\\s+günü)?${E}`),
+  repeatPeriod: re(`${B}her\\s+${PERIOD}${E}`),
+  repeatUnit: re(`${B}her\\s*(gün|hafta|ay|yıl|sene)${E}`),
   time: re(`${B}(?:(bu\\s+)?${PERIOD}\\s+)?(saat\\s*)?(\\d{1,2})(?:([:.])(\\d{2}))?(${LOC})?${E}`),
   relative: re(`${B}(\\d{1,3}|${Object.keys(NUMBERS).join("|")})\\s*(dakika|dk|saat|sa|gün|hafta|ay)\\s+sonra${E}`),
   nextWeek: re(`${B}(?:haftaya|gelecek\\s+hafta(?:ya)?|önümüzdeki\\s+hafta(?:ya)?)(?:\\s+(${DAYS})(?:\\s+günü)?)?${SUF}${UNTIL}${E}`),
@@ -92,6 +100,7 @@ export function parseQuick(input: string, lists: TodoList[], now = new Date()): 
   let exact: { due: string; time: string } | undefined;
   let priority: Priority | undefined;
   let listId: string | undefined;
+  let repeat: Repeat | undefined;
 
   const setDate = (d: Date, m: RegExpMatchArray) => {
     date = d;
@@ -110,6 +119,50 @@ export function parseQuick(input: string, lists: TodoList[], now = new Date()): 
     if (hit) listId = hit.id;
     return !!hit;
   });
+
+  // 2b) Tekrar (ilk tarih de buradan çıkar; "her akşam 8'de" → her gün 20:00)
+  const repeatRules: (() => unknown)[] = [
+    () =>
+      take(RX.repeatWeekdays, (m) => {
+        const day = today.getDay();
+        setDate(shiftDays(today, day === 6 ? 2 : day === 0 ? 1 : 0), m);
+        repeat = "weekdays";
+        return true;
+      }),
+    () =>
+      take(RX.repeatMonthDay, (m) => {
+        const day = Number(m[1]);
+        if (day < 1 || day > 31) return false;
+        const inMonth = (offset: number) => {
+          const y = today.getFullYear();
+          const mo = today.getMonth() + offset;
+          return new Date(y, mo, Math.min(day, new Date(y, mo + 1, 0).getDate()));
+        };
+        setDate(inMonth(0) >= today ? inMonth(0) : inMonth(1), m);
+        repeat = "monthly";
+        return true;
+      }),
+    () =>
+      take(RX.repeatWeekday, (m) => {
+        setDate(shiftDays(today, (WEEKDAY[m[1]] - today.getDay() + 7) % 7), m);
+        repeat = "weekly";
+        return true;
+      }),
+    () =>
+      take(RX.repeatPeriod, (m) => {
+        period = periodKey(m[1]);
+        repeat = "daily";
+        return true;
+      }),
+    () =>
+      take(RX.repeatUnit, (m) => {
+        repeat = ({ gün: "daily", hafta: "weekly", ay: "monthly", yıl: "yearly", sene: "yearly" } as const)[
+          m[1] as "gün" | "hafta" | "ay" | "yıl" | "sene"
+        ];
+        return true;
+      }),
+  ];
+  for (const rule of repeatRules) if (!repeat) rule();
 
   // 3) Saat: "15:00", "saat 9", "3'te", "akşam 8'de", "bu akşam 7"
   take(RX.time, (m) => {
@@ -223,6 +276,10 @@ export function parseQuick(input: string, lists: TodoList[], now = new Date()): 
       due = toKey(time > nowHM ? today : shiftDays(today, 1));
     }
   }
+  if (repeat && !due) due = toKey(today); // tekrar her zaman bir tarihle başlar
+  // İlk tekrarın saati bugün geçtiyse bir sonrakinden başla (pazartesi 11:00'de "her pazartesi 10:00")
+  if (repeat && due === toKey(today) && time && time <= `${pad(now.getHours())}:${pad(now.getMinutes())}`)
+    due = nextDue(due, repeat, due);
 
   // 8) Başlığı temizle
   cuts.sort((a, b) => a[0] - b[0]);
@@ -237,7 +294,7 @@ export function parseQuick(input: string, lists: TodoList[], now = new Date()): 
   text = text.replace(/\s{2,}/g, " ").replace(/^[\s,;:.\-–—]+|[\s,;:\-–—]+$/g, "").trim();
 
   const found = cuts.length > 0;
-  return { text, due, time, priority, listId, found };
+  return { text, due, time, priority, listId, repeat, found };
 }
 
 function makeDate(day: number, month: number, year: string | undefined, today: Date) {

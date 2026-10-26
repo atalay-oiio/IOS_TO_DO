@@ -376,6 +376,7 @@ button:disabled { cursor: default; }
 .row-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
 .meta { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--label-2); font-variant-numeric: tabular-nums; }
 .meta.overdue { color: var(--red); font-weight: 600; }
+.meta-icon { display: grid; }
 .flag-mark { color: var(--orange); display: grid; }
 
 .edit-form input {

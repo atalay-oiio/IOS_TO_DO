@@ -1,5 +1,6 @@
 // Tarihler "YYYY-MM-DD" anahtarı olarak yerel saatte tutulur.
 // (toISOString UTC'ye çevirdiği için gece yarısı civarında yanlış güne kayar.)
+import type { Repeat } from "./types";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -64,6 +65,31 @@ export function isOverdue(due: string | undefined, time: string | undefined, now
   if (due < today) return true;
   if (due > today || !time) return false;
   return time < `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+const isWeekend = (key: string) => [0, 6].includes(parseKey(key).getDay());
+
+// Tekrarlayan görevin sonraki tarihi: bugünden sonraki ilk tekrar. Gecikmiş bir görev tamamlanınca
+// arada kalan günler (bugün dahil) atlanır; erken tamamlanınca da bir sonraki tekrara geçer.
+// Ay sonuna denk gelen günler kısalan aylarda ayın son gününe çekilir (31 Ocak → 28 Şubat).
+export function nextDue(due: string, repeat: Repeat, today = todayKey()) {
+  if (repeat === "weekdays") {
+    let next = due;
+    do next = addDays(next, 1);
+    while (isWeekend(next) || next <= today);
+    return next;
+  }
+  const start = parseKey(due);
+  const at = (n: number) => {
+    if (repeat === "daily") return addDays(due, n);
+    if (repeat === "weekly") return addDays(due, 7 * n);
+    const y = start.getFullYear() + (repeat === "yearly" ? n : 0);
+    const m = start.getMonth() + (repeat === "monthly" ? n : 0);
+    return toKey(new Date(y, m, Math.min(start.getDate(), new Date(y, m + 1, 0).getDate())));
+  };
+  let n = 1;
+  while (at(n) <= today) n++;
+  return at(n);
 }
 
 // "Planlanan" görünümündeki bölüm başlığı

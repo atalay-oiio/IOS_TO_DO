@@ -21,7 +21,7 @@ import { Alert, type AlertAction } from "./Sheet";
 import { Menu, type MenuItem } from "./Menu";
 import { Icon, type IconName } from "./icons";
 import { Confetti, ProgressRing } from "./Decor";
-import { dueGroup, formatDue, headerDate, isOverdue, todayKey } from "@/lib/date";
+import { dueGroup, formatDue, headerDate, isOverdue, nextDue, todayKey } from "@/lib/date";
 import { makeTodo, normalizeData, useApplyTheme, useTodoStore } from "@/lib/store";
 import { parseQuick } from "@/lib/parse";
 import { paintStyle, resolvePaint } from "@/lib/paint";
@@ -37,7 +37,15 @@ import {
 import { usePush } from "@/lib/push-client";
 import { REMINDER_EVENT, reminderPayload, useReminders, type ReminderEvent } from "@/lib/reminders";
 import { useUpdateCheck } from "@/lib/update";
-import { PRIORITY_LABELS, VIEW_TITLES, type SortMode, type Todo, type TodoList, type View } from "@/lib/types";
+import {
+  PRIORITY_LABELS,
+  REPEAT_LABELS,
+  VIEW_TITLES,
+  type SortMode,
+  type Todo,
+  type TodoList,
+  type View,
+} from "@/lib/types";
 
 type AlertState = { title: string; message?: ReactNode; actions: AlertAction[] };
 type Toast = { id: number; text: string; undo?: () => void; label?: string; sticky?: boolean };
@@ -66,6 +74,7 @@ export default function TodoApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [checking, setChecking] = useState<Set<string>>(() => new Set()); // tekrarlayan: onay bir an görünür
   const [taskSheet, setTaskSheet] = useState<{ open: boolean; todo: Todo | null }>({ open: false, todo: null });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [listsOpen, setListsOpen] = useState(false);
@@ -272,12 +281,13 @@ export default function TodoApp() {
 
   // Akıllı ekleme: "yarın 15:00 toplantı !! #iş"
   const parsed = settings.smartAdd && input.trim() ? parseQuick(input, lists) : null;
-  const quick: Partial<Pick<Todo, "due" | "time" | "priority" | "listId">> = parsed?.found
+  const quick: Partial<Pick<Todo, "due" | "time" | "priority" | "listId" | "repeat">> = parsed?.found
     ? {
         ...(parsed.due ? { due: parsed.due } : {}),
         ...(parsed.time ? { time: parsed.time } : {}),
         ...(parsed.priority ? { priority: parsed.priority } : {}),
         ...(parsed.listId ? { listId: parsed.listId } : {}),
+        ...(parsed.repeat ? { repeat: parsed.repeat } : {}),
       }
     : {};
   const quickTitle = parsed?.found && parsed.text ? parsed.text : input.trim();
@@ -291,10 +301,37 @@ export default function TodoApp() {
     setInput("");
   };
 
+  // Tekrarlayan görev tamamlanınca bir sonraki tarihe geçer (iOS Anımsatıcılar gibi); alt görevler sıfırlanır
+  const advance = (t: Todo) => {
+    const due = nextDue(t.due!, t.repeat!);
+    store.update(t.id, { due, subtasks: t.subtasks.map((s) => ({ ...s, done: false })) });
+    notify(`“${t.text}” tamamlandı · sonraki: ${formatDue(due, t.time)}`, () =>
+      store.update(t.id, { due: t.due, subtasks: t.subtasks })
+    );
+  };
+
+  // Bildirimden ya da hatırlatma şeridinden tamamlama
+  const finish = (t: Todo) => {
+    if (t.done) return;
+    if (t.repeat && t.due) advance(t);
+    else store.setDone(new Set([t.id]), true);
+  };
+
   const toggle = (id: string) => {
     const t = todos.find((x) => x.id === id);
-    if (!t) return;
-    store.toggle(id);
+    if (!t || checking.has(id)) return;
+    if (!t.done && t.repeat && t.due) {
+      // Onay işareti bir an görünsün, sonra görev sonraki tarihe geçsin
+      setChecking((s) => new Set(s).add(id));
+      setTimeout(() => {
+        setChecking((s) => {
+          const next = new Set(s);
+          next.delete(id);
+          return next;
+        });
+        advance(t);
+      }, 600);
+    } else store.toggle(id);
     // Kapsamdaki son görev tamamlanınca kutla
     if (!t.done && settings.celebrate && scope.some((x) => x.id === id)) {
       const remaining = scope.filter((x) => !x.done && x.id !== id).length;
@@ -459,6 +496,7 @@ export default function TodoApp() {
     const complete = (id: string) => {
       const t = todosRef.current.find((x) => x.id === id);
       if (!t) return;
+      if (t.repeat && t.due && !t.done) return advance(t); // sonraki tarihi bildirir
       if (!t.done) store.setDone(new Set([id]), true);
       notify(`“${t.text}” tamamlandı`);
     };
@@ -529,6 +567,7 @@ export default function TodoApp() {
       showList={!listFilter && lists.length > 1}
       sortable={canSort}
       editing={editingId === t.id}
+      checking={checking.has(t.id)}
       onToggle={() => toggle(t.id)}
       onEdit={() => setEditingId(t.id)}
       onSave={(text) => {
@@ -705,6 +744,12 @@ export default function TodoApp() {
               {listById.get(parsed.listId)?.name}
             </span>
           )}
+          {parsed.repeat && (
+            <span className="pchip">
+              <Icon name="repeat" size={13} stroke={2.2} />
+              {REPEAT_LABELS[parsed.repeat]}
+            </span>
+          )}
           {parsed.time && settings.reminders && (
             <span className="pchip">
               <Icon name="bell" size={13} stroke={2.2} />
@@ -713,7 +758,7 @@ export default function TodoApp() {
           )}
         </div>
       ) : inputFocused && !input && settings.smartAdd ? (
-        <p className="hint">Dene: “yarın 15:00 toplantı !! #iş” ya da “cuma akşamı sinema”</p>
+        <p className="hint">Dene: “yarın 15:00 toplantı !! #iş” ya da “her sabah ilaç”</p>
       ) : active.length > 1 && sortable ? (
         <p className="hint">
           <span className="touch-only">Sıralamak için basılı tut · İşlemler için sola kaydır</span>
@@ -822,7 +867,8 @@ export default function TodoApp() {
             type="button"
             className="banner-btn"
             onClick={() => {
-              store.setDone(new Set([banner.id]), true);
+              const t = todos.find((x) => x.id === banner.id);
+              if (t) finish(t);
               setBanner(null);
             }}
           >

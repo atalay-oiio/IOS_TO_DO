@@ -99,6 +99,7 @@ const paths = {
     </>
   ),
   restart: <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4v4h4" />,
+  repeat: <path d="M17 3l3 3-3 3M4 12v-1.5A4.5 4.5 0 0 1 8.5 6H20M7 21l-3-3 3-3M20 12v1.5a4.5 4.5 0 0 1-4.5 4.5H4" />,
   download: <path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14" />,
   upload: <path d="M12 20V9M7.5 13.5L12 9l4.5 4.5M5 4h14" />,
   sparkles: (

@@ -6,7 +6,9 @@ import { accentId, DEFAULT_LIST_PAINTS, isPaintId } from "./paint";
 import {
   DEFAULT_SETTINGS,
   newId,
+  REPEAT_LABELS,
   type Priority,
+  type Repeat,
   type Settings,
   type Subtask,
   type Todo,
@@ -59,6 +61,7 @@ function normalizeTodo(v: unknown, listIds: Set<string>, fallbackList: string): 
     notes: str(v.notes),
     due,
     time: due ? timeKey(v.time) : undefined,
+    repeat: due && typeof v.repeat === "string" && Object.hasOwn(REPEAT_LABELS, v.repeat) ? (v.repeat as Repeat) : undefined,
     alert:
       v.alert === null ? null : typeof v.alert === "number" && v.alert >= 0 && v.alert <= 10080 ? Math.round(v.alert) : 0,
     priority: (p >= 0 && p <= 3 ? Math.round(p) : 0) as Priority,

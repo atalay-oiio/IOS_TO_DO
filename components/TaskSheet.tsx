@@ -7,9 +7,26 @@ import { Icon } from "./icons";
 import { addDays, formatDue, nextMonday, nextWeekend, todayKey } from "@/lib/date";
 import { makeTodo } from "@/lib/store";
 import { paintStyle } from "@/lib/paint";
-import { ALERT_OPTIONS, newId, PRIORITY_LABELS, type Priority, type Todo, type TodoList } from "@/lib/types";
+import {
+  ALERT_OPTIONS,
+  newId,
+  PRIORITY_LABELS,
+  REPEAT_LABELS,
+  type Priority,
+  type Repeat,
+  type Todo,
+  type TodoList,
+} from "@/lib/types";
 
-type Draft = Pick<Todo, "text" | "notes" | "due" | "time" | "alert" | "priority" | "flagged" | "listId" | "subtasks">;
+type Draft = Pick<
+  Todo,
+  "text" | "notes" | "due" | "time" | "alert" | "repeat" | "priority" | "flagged" | "listId" | "subtasks"
+>;
+
+const REPEAT_CHOICES: { value: Repeat | undefined; label: string }[] = [
+  { value: undefined, label: "Yok" },
+  ...(Object.keys(REPEAT_LABELS) as Repeat[]).map((value) => ({ value, label: REPEAT_LABELS[value] })),
+];
 
 const fromTodo = (t: Todo): Draft => ({
   text: t.text,
@@ -17,6 +34,7 @@ const fromTodo = (t: Todo): Draft => ({
   due: t.due,
   time: t.time,
   alert: t.alert,
+  repeat: t.repeat,
   priority: t.priority,
   flagged: t.flagged,
   listId: t.listId,
@@ -127,12 +145,17 @@ export function TaskSheet({
               </span>
               <div className="cell-text">
                 <span>Tarih</span>
-                {d.due && <small className="accent-text">{formatDue(d.due)}</small>}
+                {d.due && (
+                  <small className="accent-text">
+                    {formatDue(d.due)}
+                    {d.repeat && ` · ${REPEAT_LABELS[d.repeat]}`}
+                  </small>
+                )}
               </div>
               <Switch
                 label="Tarih"
                 checked={!!d.due}
-                onChange={(on) => set(on ? { due: todayKey() } : { due: undefined, time: undefined })}
+                onChange={(on) => set(on ? { due: todayKey() } : { due: undefined, time: undefined, repeat: undefined })}
               />
             </div>
             {d.due && (
@@ -153,9 +176,30 @@ export function TaskSheet({
                   type="date"
                   className="native"
                   value={d.due}
-                  onChange={(e) => set(e.target.value ? { due: e.target.value } : { due: undefined, time: undefined })}
+                  onChange={(e) =>
+                    set(e.target.value ? { due: e.target.value } : { due: undefined, time: undefined, repeat: undefined })
+                  }
                   aria-label="Tarih seç"
                 />
+                <div className="alert-row">
+                  <span className="alert-label">
+                    <Icon name="repeat" size={14} stroke={2.2} /> Tekrarla
+                  </span>
+                  <div className="chips wrap" role="radiogroup" aria-label="Tekrar">
+                    {REPEAT_CHOICES.map((o) => (
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={d.repeat === o.value}
+                        key={o.label}
+                        className={`chip small ${d.repeat === o.value ? "on" : ""}`}
+                        onClick={() => set({ repeat: o.value })}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             <div className="cell">
