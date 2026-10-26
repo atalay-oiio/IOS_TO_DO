@@ -24,6 +24,7 @@ type Props = {
   onInfo: () => void;
   onFlag: () => void;
   onDelete: () => void;
+  onSubtask: (subtaskId: string) => void;
 };
 
 export function TaskRow({
@@ -40,11 +41,13 @@ export function TaskRow({
   onInfo,
   onFlag,
   onDelete,
+  onSubtask,
 }: Props) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: todo.id, disabled: editing || !sortable });
 
   const [draft, setDraft] = useState(todo.text);
+  const [showSubs, setShowSubs] = useState(false); // alt görevler satırın içinde açık mı
   const inputRef = useRef<HTMLInputElement>(null);
   // Enter/Escape sonrası input kaldırılırken gelen blur'un tekrar kaydetmesini engeller
   const finished = useRef(false);
@@ -146,7 +149,9 @@ export function TaskRow({
         rowRef.current = el;
       }}
       style={{ transform: CSS.Transform.toString(transform), transition, "--o": `${offset}px` } as CSSProperties}
-      className={`row ${todo.done ? "done" : ""} ${isDragging ? "dragging" : ""}`}
+      className={`row ${todo.done ? "done" : ""} ${isDragging ? "dragging" : ""} ${
+        showSubs && !editing && todo.subtasks.length > 0 ? "subs-open" : ""
+      }`}
       {...listeners}
     >
       <div className="row-actions left" style={{ opacity: offset > 0 ? 1 : 0 }} aria-hidden={offset <= 0}>
@@ -247,10 +252,19 @@ export function TaskRow({
                 </span>
               )}
               {todo.subtasks.length > 0 && (
-                <span className="meta">
+                <button
+                  type="button"
+                  className="meta meta-btn"
+                  aria-expanded={showSubs}
+                  aria-label={`Alt görevler: ${subDone}/${todo.subtasks.length} tamamlandı`}
+                  onClick={() => setShowSubs((o) => !o)}
+                >
                   <Icon name="list" size={13} stroke={2.2} />
                   {subDone}/{todo.subtasks.length}
-                </span>
+                  <span className="chev-sm">
+                    <Icon name="chevronRight" size={11} stroke={2.6} />
+                  </span>
+                </button>
               )}
               {showList && list && (
                 <span className="meta">
@@ -259,6 +273,27 @@ export function TaskRow({
                 </span>
               )}
             </div>
+          )}
+          {/* Alt görevler satırın içinde açılır, ayrıntılara girmeden işaretlenir */}
+          {showSubs && !editing && todo.subtasks.length > 0 && (
+            <ul className="row-subs" style={list ? paintStyle(list.color) : undefined}>
+              {todo.subtasks.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={s.done}
+                    className={`row-sub ${s.done ? "done" : ""}`}
+                    onClick={() => onSubtask(s.id)}
+                  >
+                    <span className={`check small ${s.done ? "on" : ""}`}>
+                      <Icon name="check" size={12} stroke={3.4} />
+                    </span>
+                    <span className="row-sub-text">{s.text}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
 

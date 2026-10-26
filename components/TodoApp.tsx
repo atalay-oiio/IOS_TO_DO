@@ -579,6 +579,9 @@ export default function TodoApp() {
       onInfo={() => setTaskSheet({ open: true, todo: t })}
       onFlag={() => store.update(t.id, { flagged: !t.flagged })}
       onDelete={() => requestDelete(t.id)}
+      onSubtask={(sid) =>
+        store.update(t.id, { subtasks: t.subtasks.map((s) => (s.id === sid ? { ...s, done: !s.done } : s)) })
+      }
     />
   );
 
