@@ -102,7 +102,12 @@ function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (raw) {
       const s: Settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-      return { ...s, accent: accentId(s.accent) }; // eski "#rrggbb" kayıtları paint id'ye çevrilir
+      const glass = Math.round(Number(s.glass));
+      return {
+        ...s,
+        accent: accentId(s.accent), // eski "#rrggbb" kayıtları paint id'ye çevrilir
+        glass: glass >= 0 && glass <= 4 ? glass : DEFAULT_SETTINGS.glass,
+      };
     }
   } catch {}
   return DEFAULT_SETTINGS;
@@ -257,11 +262,14 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
     if (!loaded) return;
     const root = document.documentElement;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    // Cihazda "şeffaflığı azalt" açıksa cam her zaman buzlu (iOS 27 gibi)
+    const reduce = window.matchMedia("(prefers-reduced-transparency: reduce)");
     root.dataset.accent = settings.accent;
 
     const apply = () => {
       const dark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
       root.dataset.theme = dark ? "dark" : "light";
+      root.dataset.glass = String(reduce.matches ? 4 : settings.glass);
       document
         .querySelectorAll('meta[name="theme-color"]')
         .forEach((m) => m.setAttribute("content", dark ? "#07070f" : "#eef0f8"));
@@ -269,6 +277,10 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
 
     apply();
     mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, [settings.theme, settings.accent, loaded]);
+    reduce.addEventListener("change", apply);
+    return () => {
+      mq.removeEventListener("change", apply);
+      reduce.removeEventListener("change", apply);
+    };
+  }, [settings.theme, settings.accent, settings.glass, loaded]);
 }

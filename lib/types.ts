@@ -29,6 +29,7 @@ export type ThemeMode = "system" | "light" | "dark";
 export type Settings = {
   theme: ThemeMode;
   accent: string; // paint id (eski "#rrggbb" kayıtları yüklenirken çevrilir)
+  glass: number; // cam görünümü: 0 şeffaf … 4 buzlu
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;
@@ -49,6 +50,8 @@ export const ALERT_OPTIONS: { value: number | null; label: string }[] = [
 
 export const PRIORITY_LABELS = ["Yok", "Düşük", "Orta", "Yüksek"] as const;
 
+export const GLASS_LABELS = ["Şeffaf", "Hafif şeffaf", "Dengeli", "Hafif buzlu", "Buzlu"] as const;
+
 export const VIEW_TITLES: Record<View, string> = {
   today: "Bugün",
   planned: "Planlanan",
@@ -59,6 +62,7 @@ export const VIEW_TITLES: Record<View, string> = {
 export const DEFAULT_SETTINGS: Settings = {
   theme: "system",
   accent: DEFAULT_PAINT,
+  glass: 2,
   showCompleted: true,
   confirmDelete: true,
   celebrate: true,

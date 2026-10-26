@@ -6,14 +6,35 @@
   padding: 0 16px; pointer-events: none;
 }
 .dock > * { pointer-events: auto; }
+/* iOS 27 kaydırma kenarı: liste sekme çubuğunun altına girerken yumuşakça kaybolur */
+.dock::before {
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: -40px;
+  bottom: calc(-1 * max(12px, env(safe-area-inset-bottom)));
+  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 88%, transparent) 72%);
+  pointer-events: none;
+}
 .tabbar { --r: 99px; flex: 1; max-width: 420px; display: flex; gap: 2px; padding: 5px; }
+/* Seçili sekmenin zemini yaylanarak kayar, giderken hafifçe esner (sıvı cam) */
+.tab-thumb {
+  position: absolute; top: 5px; bottom: 5px; left: 5px; z-index: 0;
+  width: calc((100% - 10px - (var(--n) - 1) * 2px) / var(--n));
+  border-radius: 99px; background: var(--fill);
+  box-shadow: inset 0 0.5px 0 var(--glass-rim-2);
+  transform: translateX(calc(var(--i) * (100% + 2px)));
+  transition: transform 0.5s var(--spring);
+}
+.tab-thumb.a { animation: thumb-stretch-a 0.5s var(--ease); }
+.tab-thumb.b { animation: thumb-stretch-b 0.5s var(--ease); }
+@keyframes thumb-stretch-a { 35% { scale: 1.14 0.9; } }
+@keyframes thumb-stretch-b { 35% { scale: 1.14 0.9; } }
 .tab {
+  position: relative; z-index: 1;
   flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
   padding: 7px 4px 5px; border-radius: 99px; color: var(--label);
-  transition: background 0.3s var(--ease), color 0.2s, transform 0.25s var(--spring);
+  transition: color 0.2s, transform 0.25s var(--spring);
 }
 .tab:active { transform: scale(0.92); }
-.tab.on { background: var(--fill); color: var(--accent); }
+.tab.on { color: var(--accent); }
 .tab-icon { position: relative; display: grid; }
 .badge {
   position: absolute; top: -5px; left: calc(100% - 6px);
@@ -69,8 +90,8 @@
   margin-bottom: max(8px, env(safe-area-inset-bottom));
   display: flex; flex-direction: column;
   background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(190%);
-  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: var(--glass-filter-strong);
+  backdrop-filter: var(--glass-filter-strong);
   outline: none;
   animation: sheet-in 0.5s var(--ease);
   transition: transform 0.35s var(--ease);
@@ -222,13 +243,38 @@
 .color-dot:active { transform: scale(0.85); }
 .color-dot.on { outline: 2.5px solid var(--label); outline-offset: 3px; }
 
+/* Kaydırıcı (iOS: solda dolu iz, beyaz yuvarlak tutamaç) */
+.slider-row { display: flex; align-items: center; gap: 10px; }
+.slider-end { flex-shrink: 0; font-size: 13px; color: var(--label-2); }
+.slider {
+  -webkit-appearance: none; appearance: none;
+  flex: 1; min-width: 0; height: 30px; margin: 0; background: transparent; cursor: pointer;
+}
+.slider:disabled { opacity: 0.4; cursor: default; }
+.slider::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 99px;
+  background: linear-gradient(to right, var(--accent) var(--p), var(--fill-2) var(--p));
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%;
+  background: #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s var(--spring);
+}
+.slider:active::-webkit-slider-thumb { transform: scale(1.15); }
+.slider::-moz-range-track { height: 4px; border-radius: 99px; background: var(--fill-2); }
+.slider::-moz-range-progress { height: 4px; border-radius: 99px; background: var(--accent); }
+.slider::-moz-range-thumb {
+  width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+
 /* ============ Uyarı penceresi ============ */
 .alert {
   --r: 30px;
   width: min(100%, 310px); padding: 22px 16px 16px; text-align: center;
   background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(190%);
-  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: var(--glass-filter-strong);
+  backdrop-filter: var(--glass-filter-strong);
   animation: alert-in 0.4s var(--spring);
 }
 .layer.closing .alert { animation: alert-out 0.2s ease forwards; }
@@ -262,8 +308,8 @@
   position: absolute; top: calc(100% + 8px); right: 0; z-index: 45;
   width: 252px; padding: 6px;
   background: var(--glass-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(190%);
-  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: var(--glass-filter-strong);
+  backdrop-filter: var(--glass-filter-strong);
   transform-origin: top right;
   animation: menu-in 0.35s var(--spring);
 }
@@ -300,9 +346,9 @@
   height: 32px; padding: 0 12px; border-radius: 99px;
   font-size: 13px; font-weight: 600; color: var(--orange);
   background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px var(--glass-rim-2);
+  -webkit-backdrop-filter: var(--glass-filter-soft);
+  backdrop-filter: var(--glass-filter-soft);
+  box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px var(--glass-rim-2), 0 0 0 0.5px var(--glass-edge);
   animation: pop 0.3s var(--ease);
 }
 
@@ -380,13 +426,16 @@ html.privacy, html.privacy body { overflow: hidden; }
   height: 76px; border-radius: 50%; display: grid; place-items: center;
   font-size: 28px; color: var(--label);
   background: var(--glass-bg);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px var(--glass-rim-2);
+  -webkit-backdrop-filter: var(--glass-filter-soft);
+  backdrop-filter: var(--glass-filter-soft);
+  box-shadow: inset 0 0.5px 0 var(--glass-rim), inset 0 0 0 0.5px var(--glass-rim-2), 0 0 0 0.5px var(--glass-edge);
   transition: transform 0.15s var(--spring), background 0.2s;
 }
 .key:active { transform: scale(0.9); background: var(--fill-2); }
-.key.ghost { background: none; box-shadow: none; color: var(--label-2); }
+.key.ghost {
+  background: none; box-shadow: none; color: var(--label-2);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
 .key.ghost.small { font-size: 15px; font-weight: 600; color: var(--accent); }
 .key:disabled { opacity: 0.3; transform: none; }
 .lock-option {

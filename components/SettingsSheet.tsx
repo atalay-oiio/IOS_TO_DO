@@ -2,13 +2,13 @@
 
 import { useRef, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
-import { PaintDots, Segmented, Switch, type PaintOption } from "./ui";
+import { PaintDots, Segmented, Slider, Switch, type PaintOption } from "./ui";
 import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
 import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
 import { DELAY_OPTIONS, pinLength, type LockConfig } from "@/lib/lock";
-import { type Settings, type SortMode, type ThemeMode } from "@/lib/types";
+import { GLASS_LABELS, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
 
@@ -67,6 +67,9 @@ export function SettingsSheet({
   const fileRef = useRef<HTMLInputElement>(null);
   const [testResult, setTestResult] = useState("");
   const { permission, server, subscription } = push.state;
+  // Cihazda "şeffaflığı azalt" açıksa cam ayarı sistemde kalır
+  const reduceTransparency =
+    open && typeof window !== "undefined" && window.matchMedia("(prefers-reduced-transparency: reduce)").matches;
 
   const status =
     permission === "unsupported"
@@ -110,6 +113,19 @@ export function SettingsSheet({
             options={PAINT_OPTIONS}
             value={resolvePaint(settings.accent).id}
             onChange={(accent) => setSettings({ accent })}
+          />
+          <p className="pad-label">
+            Cam görünümü · {reduceTransparency ? "Sistem: şeffaflık azaltıldı" : GLASS_LABELS[settings.glass]}
+          </p>
+          <Slider
+            label="Cam görünümü"
+            min={0}
+            max={4}
+            value={reduceTransparency ? 4 : settings.glass}
+            onChange={(glass) => setSettings({ glass })}
+            start="Şeffaf"
+            end="Buzlu"
+            disabled={reduceTransparency}
           />
         </div>
 

@@ -25,13 +25,14 @@ export const viewport: Viewport = {
 };
 
 // Tema ve vurgu rengini ilk boyamadan önce uygula (açılışta yanıp sönmeyi önler).
-// Renk değerleri accentCss()'te; betik yalnızca seçili rengi <html data-accent>'e yazar.
+// Renk değerleri accentCss()'te; betik yalnızca seçili rengi <html data-accent>'e, cam ayarını data-glass'a yazar.
 const themeScript = `(function(){try{
 var s=JSON.parse(localStorage.getItem('glass-todo:settings')||'{}');
 var t=s.theme||'system';
 var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);
 var r=document.documentElement;r.dataset.theme=d?'dark':'light';
 var a=s.accent;if(typeof a==='string'&&a)r.dataset.accent=${JSON.stringify(ACCENT_ALIASES)}[a.toLowerCase()]||a;
+var g=matchMedia('(prefers-reduced-transparency: reduce)').matches?4:s.glass;if(typeof g==='number')r.dataset.glass=g;
 var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#07070f':'#eef0f8');
 }catch(e){}})();`;
 

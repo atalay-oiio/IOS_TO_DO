@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -60,6 +60,7 @@ export default function TodoApp() {
   useApplyTheme(settings, loaded);
 
   const [view, setView] = useState<View>("all");
+  const [tabMoves, setTabMoves] = useState(0); // sekme göstergesinin esneme animasyonunu yeniden başlatır
   const [listFilter, setListFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -778,12 +779,18 @@ export default function TodoApp() {
       {/* iOS 26 yüzen sekme çubuğu + ayrık ekleme butonu */}
       <div className="dock">
         <nav className="tabbar material" aria-label="Görünümler">
+          <span
+            className={`tab-thumb ${tabMoves === 0 ? "" : tabMoves % 2 ? "a" : "b"}`}
+            style={{ "--n": TABS.length, "--i": TABS.findIndex((t) => t.view === view) } as CSSProperties}
+            aria-hidden
+          />
           {TABS.map((tab) => (
             <button
               type="button"
               key={tab.view}
               className={`tab ${view === tab.view ? "on" : ""}`}
               onClick={() => {
+                if (tab.view !== view) setTabMoves((n) => n + 1);
                 setView(tab.view);
                 setEditingId(null);
               }}

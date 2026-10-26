@@ -60,6 +60,46 @@ export function Segmented<T extends string | number>({
   );
 }
 
+// iOS kaydırıcısı; iki ucunda kısa etiketler
+export function Slider({
+  value,
+  min,
+  max,
+  onChange,
+  label,
+  start,
+  end,
+  disabled,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+  label: string;
+  start: ReactNode;
+  end: ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="slider-row">
+      <span className="slider-end">{start}</span>
+      <input
+        type="range"
+        className="slider"
+        min={min}
+        max={max}
+        step={1}
+        value={value}
+        disabled={disabled}
+        aria-label={label}
+        style={{ "--p": `${((value - min) / (max - min)) * 100}%` } as CSSProperties}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <span className="slider-end">{end}</span>
+    </div>
+  );
+}
+
 export type PaintOption = { id: string; name: string; background: string };
 
 export function PaintDots({
