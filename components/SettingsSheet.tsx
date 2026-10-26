@@ -7,7 +7,7 @@ import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
 import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
-import { DELAY_OPTIONS, type LockConfig } from "@/lib/lock";
+import { DELAY_OPTIONS, pinLength, type LockConfig } from "@/lib/lock";
 import { type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
@@ -232,7 +232,7 @@ export function SettingsSheet({
             </span>
             <div className="cell-text">
               <span>Uygulama kilidi</span>
-              <small>{lock.cfg.enabled ? "Açık · PIN sorulur" : "Kapalı"}</small>
+              <small>{lock.cfg.enabled ? `Açık · ${pinLength(lock.cfg.pin)} haneli PIN` : "Kapalı"}</small>
             </div>
             <Switch
               label="Uygulama kilidi"

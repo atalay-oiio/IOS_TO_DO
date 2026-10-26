@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -84,7 +84,11 @@ export default function TodoApp() {
   todosRef.current = todos;
 
   const [lock, setLockState] = useState<LockConfig>(DEFAULT_LOCK);
+  const lockRef = useRef(lock);
+  lockRef.current = lock;
   const [locked, setLocked] = useState(false);
+  const lockedRef = useRef(locked);
+  lockedRef.current = locked;
   const [pinSetup, setPinSetup] = useState(false);
   const [bioOk, setBioOk] = useState(false);
 
@@ -96,20 +100,31 @@ export default function TodoApp() {
     biometricAvailable().then(setBioOk);
   }, []);
 
-  const updateLock = (patch: Partial<LockConfig>) =>
-    setLockState((cfg) => {
-      const next = { ...cfg, ...patch };
-      saveLock(next);
-      return next;
-    });
+  // Hemen kaydedilir: yanlış deneme sayacı sayfa yenilense ya da uygulama kapansa da sıfırlanmaz
+  const updateLock = (patch: Partial<LockConfig>) => {
+    const next = { ...lockRef.current, ...patch };
+    lockRef.current = next;
+    saveLock(next);
+    setLockState(next);
+  };
 
-  // Uygulamadan çıkıp dönünce seçilen süreden sonra tekrar kilitle
+  // Kilitliyken görevler hiç çizilmez (kilit ekranı belirirken arkası görünmesin)
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("privacy", locked);
+  }, [locked]);
+
+  // Uygulamadan çıkınca içerik gizlenir (son uygulamalar ekranı); seçilen süre dolduysa dönüşte kilitlenir
   useEffect(() => {
     if (!lock.enabled || !lock.pin) return;
+    const root = document.documentElement;
     let hiddenAt = 0;
     const onVisible = () => {
-      if (document.visibilityState === "hidden") hiddenAt = Date.now();
-      else if (hiddenAt && Date.now() - hiddenAt >= lock.delay) setLocked(true);
+      if (document.visibilityState === "hidden") {
+        hiddenAt = Date.now();
+        root.classList.add("privacy");
+        if (lock.delay === 0) setLocked(true);
+      } else if (hiddenAt && Date.now() - hiddenAt >= lock.delay) setLocked(true);
+      else if (!lockedRef.current) root.classList.remove("privacy");
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
@@ -422,7 +437,8 @@ export default function TodoApp() {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
       if (e.metaKey || e.ctrlKey || e.altKey || el.closest("input, textarea, [role=dialog], [role=alertdialog]")) return;
-      if (document.documentElement.classList.contains("locked")) return;
+      const html = document.documentElement.classList;
+      if (html.contains("locked") || html.contains("privacy")) return;
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         setSheetDefaults(null);
@@ -849,7 +865,7 @@ export default function TodoApp() {
           cfg: lock,
           biometricOk: bioOk,
           setup: () => setPinSetup(true),
-          disable: () => updateLock({ enabled: false, pin: null, credentialId: null }),
+          disable: () => updateLock({ enabled: false, pin: null, credentialId: null, fails: 0, lastFail: 0 }),
           setDelay: (delay) => updateLock({ delay }),
           toggleBiometric: async (on) => {
             if (!on) return updateLock({ credentialId: null });
@@ -930,14 +946,24 @@ export default function TodoApp() {
         <Confetti />
       </Alert>
 
-      {locked && <LockScreen mode="unlock" cfg={lock} onUnlock={() => setLocked(false)} />}
-      {pinSetup && (
+      {locked && (
+        <LockScreen
+          mode="unlock"
+          cfg={lock}
+          onFail={() => updateLock({ fails: lockRef.current.fails + 1, lastFail: Date.now() })}
+          onUnlock={(pin) => {
+            updateLock({ fails: 0, lastFail: 0, ...(pin ? { pin } : {}) });
+            setLocked(false);
+          }}
+        />
+      )}
+      {pinSetup && !locked && (
         <LockScreen
           mode="set"
           cfg={lock}
           onCancel={() => setPinSetup(false)}
           onDone={(pin) => {
-            updateLock({ enabled: true, pin });
+            updateLock({ enabled: true, pin, fails: 0, lastFail: 0 });
             setPinSetup(false);
             notify("Uygulama kilidi açıldı");
           }}

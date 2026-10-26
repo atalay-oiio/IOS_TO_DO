@@ -344,6 +344,10 @@
 .foot.left { text-align: left; margin: 8px 16px 0; }
 
 /* ============ Kilit ekranı ============ */
+/* Kilitliyken ve uygulama arka plandayken görevler çizilmez */
+html.privacy .shell > :not(.lock) { visibility: hidden; }
+html.privacy, html.privacy body { overflow: hidden; }
+
 .lock {
   position: fixed; inset: 0; z-index: 100;
   display: grid; place-items: center; padding: 24px;
@@ -384,6 +388,12 @@
 .key:active { transform: scale(0.9); background: var(--fill-2); }
 .key.ghost { background: none; box-shadow: none; color: var(--label-2); }
 .key.ghost.small { font-size: 15px; font-weight: 600; color: var(--accent); }
+.key:disabled { opacity: 0.3; transform: none; }
+.lock-option {
+  margin-top: 22px; padding: 8px 14px; border-radius: 99px;
+  font-size: 15px; font-weight: 600; color: var(--accent);
+}
+.lock-option:active { background: var(--fill); }
 @media (max-height: 720px) {
   .keypad { grid-template-columns: repeat(3, 66px); gap: 12px; }
   .key { height: 66px; font-size: 25px; }
