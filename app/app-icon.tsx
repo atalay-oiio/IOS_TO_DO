@@ -1,4 +1,3 @@
-// Ana ekran ikonu: gradyan zemin üzerinde cam bir onay işareti
 export function AppIcon({ size }: { size: number }) {
   const s = size / 512;
   return (

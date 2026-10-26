@@ -28,7 +28,7 @@ export type ThemeMode = "system" | "light" | "dark";
 
 export type Settings = {
   theme: ThemeMode;
-  accent: string; // paint id ya da eski kayıtlardaki "#rrggbb"
+  accent: string; // paint id (eski "#rrggbb" kayıtları yüklenirken çevrilir)
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;

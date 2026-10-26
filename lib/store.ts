@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { arrayMove } from "@dnd-kit/sortable";
-import { DEFAULT_LIST_PAINTS, isPaintId, paintBackground, resolvePaint } from "./paint";
+import { accentId, DEFAULT_LIST_PAINTS, isPaintId } from "./paint";
 import {
   DEFAULT_SETTINGS,
   newId,
@@ -100,7 +100,10 @@ function loadData(): Data {
 function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (raw) {
+      const s: Settings = { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+      return { ...s, accent: accentId(s.accent) }; // eski "#rrggbb" kayıtları paint id'ye çevrilir
+    }
   } catch {}
   return DEFAULT_SETTINGS;
 }
@@ -248,12 +251,13 @@ export function useTodoStore() {
   };
 }
 
-// Temayı ve vurgu rengini <html>'e uygular (arka plan her zaman temanın kendi rengi)
+// Temayı ve vurgu rengini <html>'e uygular (renk değerleri layout'taki accentCss()'ten gelir)
 export function useApplyTheme(settings: Settings, loaded: boolean) {
   useEffect(() => {
     if (!loaded) return;
     const root = document.documentElement;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    root.dataset.accent = settings.accent;
 
     const apply = () => {
       const dark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
@@ -261,14 +265,6 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
       document
         .querySelectorAll('meta[name="theme-color"]')
         .forEach((m) => m.setAttribute("content", dark ? "#07070f" : "#eef0f8"));
-
-      // Vurgu rengi: geçişli zemin + açık/koyu temada okunaklı tek renk
-      const paint = resolvePaint(settings.accent);
-      root.style.setProperty("--accent", (dark ? paint.solid : paint.solidLight) ?? paint.solid);
-      root.style.setProperty("--accent-grad", paintBackground(paint));
-      root.style.setProperty("--ring-1", paint.from);
-      root.style.setProperty("--ring-2", paint.mid ?? paint.solid);
-      root.style.setProperty("--ring-3", paint.to);
     };
 
     apply();

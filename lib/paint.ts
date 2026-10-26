@@ -69,3 +69,26 @@ export function paintStyle(value: string | undefined | null): CSSProperties {
   const p = resolvePaint(value);
   return { "--c": p.solid, "--cg": paintBackground(p) } as CSSProperties;
 }
+
+// ---------- Vurgu rengi ----------
+// Eski sürümlerde vurgu rengi "#0A84FF" gibi düz kodla kayıtlıydı; her biri bir paint'e karşılık gelir.
+// Artık listede olmayan camgöbeği (#64D2FF) en yakını olan turkuaza geçer.
+export const ACCENT_ALIASES: Record<string, string> = {
+  ...Object.fromEntries(PAINTS.map((p) => [p.solid.toLowerCase(), p.id])),
+  "#64d2ff": "teal",
+};
+
+export function accentId(value: string | undefined | null): string {
+  if (value && byId.has(value)) return value;
+  return (value && ACCENT_ALIASES[value.toLowerCase()]) || DEFAULT_PAINT;
+}
+
+const accentVars = (p: Paint) =>
+  `--accent-l:${p.solidLight ?? p.solid};--accent-d:${p.solid};--accent-grad:${paintBackground(p)};` +
+  `--ring-1:${p.from};--ring-2:${p.mid ?? p.solid};--ring-3:${p.to}`;
+
+// Her vurgu rengi için CSS değişkenleri (layout'ta <head>'e gömülür). Açılış betiği <html data-accent>'i
+// ilk boyamadan önce yazdığı için renk ilk karede doğru gelir; --accent temaya göre globals.css'te seçilir.
+export const accentCss = () =>
+  `:root{${accentVars(byId.get(DEFAULT_PAINT)!)}}` +
+  PAINTS.map((p) => `:root[data-accent="${p.id}"]{${accentVars(p)}}`).join("");

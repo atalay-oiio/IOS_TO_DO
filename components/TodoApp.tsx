@@ -227,7 +227,6 @@ export default function TodoApp() {
     flagged: pending.filter((t) => t.flagged).length,
   };
   const overdueCount = pending.filter((t) => isOverdue(t.due, t.time)).length;
-  const overdueHere = scope.filter((t) => !t.done && isOverdue(t.due, t.time));
   const listCounts = todos.reduce<Record<string, number>>((acc, t) => {
     if (!t.done) acc[t.listId] = (acc[t.listId] ?? 0) + 1;
     return acc;
@@ -346,19 +345,6 @@ export default function TodoApp() {
         },
       ],
     });
-  };
-
-  // Gecikmiş görevleri bugüne al; saati geçmişse saat düşer ki tekrar gecikmiş görünmesin
-  const moveOverdueToToday = () => {
-    if (overdueHere.length === 0) return;
-    const snapshot = overdueHere.map((t) => ({ id: t.id, due: t.due, time: t.time }));
-    const nowHM = new Date().toTimeString().slice(0, 5);
-    overdueHere.forEach((t) =>
-      store.update(t.id, { due: today, time: t.time && t.time > nowHM ? t.time : undefined })
-    );
-    notify(`${overdueHere.length} görev bugüne taşındı`, () =>
-      snapshot.forEach((s) => store.update(s.id, { due: s.due, time: s.time }))
-    );
   };
 
   const exportData = () => {
@@ -717,18 +703,6 @@ export default function TodoApp() {
           <span className="mouse-only">Sıralamak için sürükle · Düzenlemek için metne tıkla · N: yeni görev</span>
         </p>
       ) : null}
-
-      {overdueHere.length > 0 && !q && (
-        <div className="overdue-bar material">
-          <span>
-            <Icon name="clock" size={16} stroke={2.2} />
-            {overdueHere.length} gecikmiş görev
-          </span>
-          <button type="button" onClick={moveOverdueToToday}>
-            Bugüne taşı
-          </button>
-        </div>
-      )}
 
       <DndContext
         sensors={sensors}

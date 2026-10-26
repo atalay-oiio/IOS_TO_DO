@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { ACCENT_ALIASES, accentCss } from "@/lib/paint";
 import "./globals.css";
 import "./overlays.css";
 
@@ -23,16 +24,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-// Tema ve vurgu rengini ilk boyamadan önce uygula (açılışta yanıp sönmeyi önler)
+// Tema ve vurgu rengini ilk boyamadan önce uygula (açılışta yanıp sönmeyi önler).
+// Renk değerleri accentCss()'te; betik yalnızca seçili rengi <html data-accent>'e yazar.
 const themeScript = `(function(){try{
 var s=JSON.parse(localStorage.getItem('glass-todo:settings')||'{}');
 var t=s.theme||'system';
 var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);
 var r=document.documentElement;r.dataset.theme=d?'dark':'light';
-var c=s.accent;
-if(typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c)){var l='color-mix(in srgb, '+c+' 60%, white)';
-r.style.setProperty('--accent',c);r.style.setProperty('--accent-grad','linear-gradient(135deg, '+l+', '+c+')');
-r.style.setProperty('--ring-1',l);r.style.setProperty('--ring-2',c);r.style.setProperty('--ring-3',c);}
+var a=s.accent;if(typeof a==='string'&&a)r.dataset.accent=${JSON.stringify(ACCENT_ALIASES)}[a.toLowerCase()]||a;
 var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#07070f':'#eef0f8');
 }catch(e){}})();`;
 
@@ -41,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="tr" data-theme="dark" className={inter.variable} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#07070f" />
+        <style dangerouslySetInnerHTML={{ __html: accentCss() }} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
