@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 
 export const BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID ?? "dev";
 
+// Uygulamanın kullanıcıya görünen sürümü (Ayarlar'ın en altında)
+export const APP_VERSION = "2.0.1.8";
+
 // Uygulama açıkken yeni sürüm yayınlandıysa haber ver (yalnızca bir kez)
 export function useUpdateCheck(onUpdate: () => void) {
   const handler = useRef(onUpdate);

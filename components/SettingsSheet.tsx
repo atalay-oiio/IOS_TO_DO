@@ -9,6 +9,7 @@ import { scheduledSummary } from "@/lib/reminders";
 import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
 import { DELAY_OPTIONS, pinLength, type LockConfig } from "@/lib/lock";
 import { hapticsSupported, testVibration } from "@/lib/haptics";
+import { APP_VERSION } from "@/lib/update";
 import { GLASS_LABELS, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
@@ -390,7 +391,11 @@ export function SettingsSheet({
             e.target.value = "";
           }}
         />
-        <p className="foot">Glass Todo · Verilerin yalnızca bu cihazda saklanır.</p>
+        <p className="foot">
+          Glass Todo {APP_VERSION}
+          <br />
+          Verilerin yalnızca bu cihazda saklanır.
+        </p>
       </div>
     </Sheet>
   );
