@@ -3,22 +3,47 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 // Açık katmanlar yığını: Escape ve Android geri hareketi yalnızca en üsttekini kapatır.
-type Layer = { close: () => void; popped: boolean };
-const stack: Layer[] = [];
+// Geri hareketi uygulamadan çıkmak yerine katmanı kapatsın diye geçmişte TEK bir kayıt tutulur
+// ("en az bir katman açık"). Kayıt, değişikliklerin sonunda (mikro görevde) eşitlenir: biri kapanıp
+// diğeri aynı anda açılınca (menü → Ayarlar) geri/ileri yapılmaz. Eskiden her katman kendi kaydını
+// ekleyip siliyordu; Chrome geri hedefini çağrı anında hesapladığı için bu durumda kayıt kayıyor ve
+// ardından basılan "Bitti" uygulamanın dışına çıkıyordu.
+const stack: (() => void)[] = [];
 let locks = 0;
-let ignorePops = 0;
+let hasEntry = false; // geçmişte katmanlar için kayıt var mı
+let backPending = false; // kendi history.back()'imizin popstate'i bekleniyor
+let syncQueued = false;
 let listening = false;
 
+function sync() {
+  syncQueued = false;
+  if (backPending) return; // geri tamamlanınca (popstate) tekrar eşitlenir
+  if (stack.length > 0 && !hasEntry) {
+    history.pushState({ glassLayer: true }, "");
+    hasEntry = true;
+  } else if (stack.length === 0 && hasEntry) {
+    hasEntry = false;
+    backPending = true;
+    history.back();
+  }
+}
+
+function queueSync() {
+  if (syncQueued) return;
+  syncQueued = true;
+  queueMicrotask(sync);
+}
+
 function onPopState() {
-  if (ignorePops > 0) {
-    ignorePops--;
+  if (backPending) {
+    backPending = false;
+    queueSync();
     return;
   }
-  const top = stack[stack.length - 1];
-  if (top) {
-    top.popped = true;
-    top.close();
-  }
+  if (!hasEntry) return;
+  // Geri hareketi kaydı tüketti: en üstteki katmanı kapat (alttakiler için yeni kayıt sync'te eklenir)
+  hasEntry = false;
+  stack[stack.length - 1]?.();
 }
 
 export function useLayer(open: boolean, onClose: () => void, lock = true) {
@@ -27,30 +52,26 @@ export function useLayer(open: boolean, onClose: () => void, lock = true) {
 
   useEffect(() => {
     if (!open) return;
-    const entry: Layer = { close: () => ref.current(), popped: false };
-    stack.push(entry);
+    const close = () => ref.current();
+    stack.push(close);
     if (lock && ++locks === 1) document.documentElement.classList.add("locked");
-    // Geri tuşu/hareketi uygulamadan çıkmak yerine açık katmanı kapatsın
     if (!listening) {
       window.addEventListener("popstate", onPopState);
       listening = true;
     }
-    history.pushState({ glassLayer: true }, "");
+    queueSync();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && stack[stack.length - 1] === entry) {
+      if (e.key === "Escape" && stack[stack.length - 1] === close) {
         e.stopPropagation();
-        entry.close();
+        close();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
-      stack.splice(stack.indexOf(entry), 1);
+      stack.splice(stack.indexOf(close), 1);
       if (lock && --locks === 0) document.documentElement.classList.remove("locked");
-      if (!entry.popped) {
-        ignorePops++;
-        history.back();
-      }
+      queueSync();
     };
   }, [open, lock]);
 }
