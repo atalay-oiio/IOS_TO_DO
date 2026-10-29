@@ -8,7 +8,7 @@ import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
 import { PAINTS, paintBackground, resolvePaint } from "@/lib/paint";
 import { DELAY_OPTIONS, pinLength, type LockConfig } from "@/lib/lock";
-import { hapticsSupported } from "@/lib/haptics";
+import { hapticsSupported, testVibration } from "@/lib/haptics";
 import { GLASS_LABELS, type Settings, type SortMode, type ThemeMode } from "@/lib/types";
 
 const PAINT_OPTIONS: PaintOption[] = PAINTS.map((p) => ({ id: p.id, name: p.name, background: paintBackground(p) }));
@@ -68,6 +68,7 @@ export function SettingsSheet({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [testResult, setTestResult] = useState("");
+  const [vibrateResult, setVibrateResult] = useState("");
   const { permission, server, subscription } = push.state;
   // Cihazda "şeffaflığı azalt" açıksa cam ayarı sistemde kalır
   const reduceTransparency =
@@ -241,12 +242,37 @@ export function SettingsSheet({
             />
           </div>
           {open && hapticsSupported() && (
+            <>
+              <div className="cell">
+                <div className="cell-text">
+                  <span>Titreşim</span>
+                  <small>Görev tamamlarken, kaydırırken ve seçim yaparken hafif titreşim</small>
+                </div>
+                <Switch label="Titreşim" checked={settings.haptics} onChange={(haptics) => setSettings({ haptics })} />
+              </div>
+              <button
+                type="button"
+                className="cell action"
+                onClick={() =>
+                  setVibrateResult(
+                    testVibration()
+                      ? "Titreşti mi? Hissetmediysen telefonun Ayarlar → Ses ve titreşim → Dokunma titreşimi açık olmalı"
+                      : "Tarayıcı titreşime izin vermedi"
+                  )
+                }
+              >
+                <Icon name="sparkles" size={19} />
+                <span>Titreşimi dene</span>
+              </button>
+              {vibrateResult && <p className="foot left">{vibrateResult}</p>}
+            </>
+          )}
+          {open && !hapticsSupported() && (
             <div className="cell">
               <div className="cell-text">
                 <span>Titreşim</span>
-                <small>Görev tamamlarken, kaydırırken ve seçim yaparken hafif titreşim</small>
+                <small>Bu tarayıcı titreşimi desteklemiyor</small>
               </div>
-              <Switch label="Titreşim" checked={settings.haptics} onChange={(haptics) => setSettings({ haptics })} />
             </div>
           )}
         </div>
