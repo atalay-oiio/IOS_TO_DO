@@ -6,10 +6,10 @@ export type Haptic = "select" | "tap" | "success" | "error";
 
 // Android titreşim motorlarının çoğu ~15 ms'den kısa komutlarda hiç dönmez; süreler hissedilir aralıkta
 const PATTERNS: Record<Haptic, number | number[]> = {
-  select: 18, // anahtar, kaydırıcı adımı, tuş takımı, kaydırma eşiği
-  tap: 32, // görev tamamlama, silme, sürüklemeye başlama
-  success: [30, 80, 45], // hepsi bitti
-  error: [60, 70, 60, 70, 60], // yanlış PIN
+  select: 14, // anahtar, kaydırıcı adımı, tuş takımı, kaydırma eşiği
+  tap: 24, // görev tamamlama, silme, sürüklemeye başlama
+  success: [24, 80, 34], // hepsi bitti
+  error: [45, 70, 45, 70, 45], // yanlış PIN
 };
 
 let enabled = true;
