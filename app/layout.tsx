@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap", variable
 
 export const metadata: Metadata = {
   title: "Glass Todo",
-  description: "iOS 26 liquid glass tarzında modern yapılacaklar listesi",
+  description: "iOS 27 liquid glass tarzında modern yapılacaklar listesi",
   appleWebApp: {
     capable: true,
     title: "Todo",
