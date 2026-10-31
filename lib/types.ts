@@ -30,6 +30,7 @@ export type SortMode = "manual" | "due" | "priority" | "title";
 export type ThemeMode = "system" | "light" | "dark";
 
 export type Settings = {
+  view: View; // son açık sekme; uygulama yeniden açılınca oradan devam eder
   theme: ThemeMode;
   accent: string; // paint id (eski "#rrggbb" kayıtları yüklenirken çevrilir)
   glass: number; // cam görünümü: 0 şeffaf … 4 buzlu
@@ -72,6 +73,7 @@ export const VIEW_TITLES: Record<View, string> = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
+  view: "all",
   theme: "system",
   accent: DEFAULT_PAINT,
   glass: 2,

@@ -69,7 +69,8 @@ export default function TodoApp() {
   useApplyTheme(settings, loaded);
   useEffect(() => setHaptics(settings.haptics), [settings.haptics]);
 
-  const [view, setView] = useState<View>("all");
+  const { view } = settings;
+  const setView = (next: View) => setSettings({ view: next });
   const [tabMoves, setTabMoves] = useState(0); // sekme göstergesinin esneme animasyonunu yeniden başlatır
   const [listFilter, setListFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");

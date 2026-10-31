@@ -7,6 +7,7 @@ import {
   DEFAULT_SETTINGS,
   newId,
   REPEAT_LABELS,
+  VIEW_TITLES,
   type Priority,
   type Repeat,
   type Settings,
@@ -110,6 +111,7 @@ function loadSettings(): Settings {
         ...s,
         accent: accentId(s.accent), // eski "#rrggbb" kayıtları paint id'ye çevrilir
         glass: glass >= 0 && glass <= 4 ? glass : DEFAULT_SETTINGS.glass,
+        view: Object.hasOwn(VIEW_TITLES, s.view) ? s.view : DEFAULT_SETTINGS.view,
       };
     }
   } catch {}
