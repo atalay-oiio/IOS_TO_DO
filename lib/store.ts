@@ -112,6 +112,7 @@ function loadSettings(): Settings {
         accent: accentId(s.accent), // eski "#rrggbb" kayıtları paint id'ye çevrilir
         glass: glass >= 0 && glass <= 4 ? glass : DEFAULT_SETTINGS.glass,
         view: Object.hasOwn(VIEW_TITLES, s.view) ? s.view : DEFAULT_SETTINGS.view,
+        material: s.material === "liquid" ? "liquid" : "matte",
       };
     }
   } catch {}
@@ -270,6 +271,7 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
     // Cihazda "şeffaflığı azalt" açıksa cam her zaman buzlu (iOS 27 gibi)
     const reduce = window.matchMedia("(prefers-reduced-transparency: reduce)");
     root.dataset.accent = settings.accent;
+    root.dataset.material = settings.material;
 
     const apply = () => {
       const dark = settings.theme === "dark" || (settings.theme === "system" && mq.matches);
@@ -287,5 +289,5 @@ export function useApplyTheme(settings: Settings, loaded: boolean) {
       mq.removeEventListener("change", apply);
       reduce.removeEventListener("change", apply);
     };
-  }, [settings.theme, settings.accent, settings.glass, loaded]);
+  }, [settings.theme, settings.accent, settings.material, settings.glass, loaded]);
 }

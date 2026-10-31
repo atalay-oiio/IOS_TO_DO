@@ -32,13 +32,14 @@ var t=s.theme||'system';
 var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);
 var r=document.documentElement;r.dataset.theme=d?'dark':'light';
 var a=s.accent;if(typeof a==='string'&&a)r.dataset.accent=${JSON.stringify(ACCENT_ALIASES)}[a.toLowerCase()]||a;
+r.dataset.material=s.material==='liquid'?'liquid':'matte';
 var g=matchMedia('(prefers-reduced-transparency: reduce)').matches?4:s.glass;if(typeof g==='number')r.dataset.glass=g;
 var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',d?'#07070f':'#eef0f8');
 }catch(e){}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" data-theme="dark" className={inter.variable} suppressHydrationWarning>
+    <html lang="tr" data-theme="dark" data-material="matte" className={inter.variable} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#07070f" />
         <style dangerouslySetInnerHTML={{ __html: accentCss() }} />

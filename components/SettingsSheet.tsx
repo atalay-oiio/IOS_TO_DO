@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
-import { PaintDots, Segmented, Slider, Switch, type PaintOption } from "./ui";
+import { MaterialPicker, PaintDots, Segmented, Slider, Switch, type PaintOption } from "./ui";
 import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
@@ -118,11 +118,17 @@ export function SettingsSheet({
             value={resolvePaint(settings.accent).id}
             onChange={(accent) => setSettings({ accent })}
           />
+          <p className="pad-label">Cam malzemesi</p>
+          <MaterialPicker
+            label="Cam malzemesi"
+            value={settings.material}
+            onChange={(material) => setSettings({ material })}
+          />
           <p className="pad-label">
-            Cam görünümü · {reduceTransparency ? "Sistem: şeffaflık azaltıldı" : GLASS_LABELS[settings.glass]}
+            Cam yoğunluğu · {reduceTransparency ? "Sistem: şeffaflık azaltıldı" : GLASS_LABELS[settings.glass]}
           </p>
           <Slider
-            label="Cam görünümü"
+            label="Cam yoğunluğu"
             min={0}
             max={4}
             value={reduceTransparency ? 4 : settings.glass}

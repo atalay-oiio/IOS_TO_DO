@@ -8,9 +8,9 @@
 .dock > * { pointer-events: auto; }
 /* iOS 27 kaydırma kenarı: liste sekme çubuğunun altına girerken yumuşakça kaybolur */
 .dock::before {
-  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: -40px;
+  content: ""; position: absolute; z-index: -1; left: 0; right: 0; top: -56px;
   bottom: calc(-1 * max(12px, env(safe-area-inset-bottom)));
-  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 88%, transparent) 72%);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 62%, transparent));
   pointer-events: none;
 }
 .tabbar { --r: 99px; flex: 1; max-width: 420px; display: flex; gap: 2px; padding: 5px; }
@@ -94,7 +94,7 @@
   backdrop-filter: var(--glass-filter-strong);
   outline: none;
   animation: sheet-in 0.5s var(--ease);
-  transition: transform 0.35s var(--ease);
+  transition: transform 0.35s var(--ease), background-color 0.35s ease;
 }
 .sheet.dragging { transition: none; }
 .layer.closing .sheet { animation: sheet-out 0.28s var(--ease) forwards; }
@@ -242,6 +242,45 @@
 }
 .color-dot:active { transform: scale(0.85); }
 .color-dot.on { outline: 2.5px solid var(--label); outline-offset: 3px; }
+
+/* Cam malzemesi seçici (iOS'taki Açık/Koyu seçimi gibi): aynı küre iki farklı camın arkasında */
+.mat-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mat-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; }
+.mat-preview {
+  position: relative; width: 100%; aspect-ratio: 5 / 4; overflow: hidden; border-radius: 16px;
+  background: radial-gradient(circle at 12% 12%, var(--ring-1), transparent 62%),
+    radial-gradient(circle at 92% 92%, var(--ring-3), transparent 62%), var(--bg);
+  box-shadow: 0 0 0 0.5px var(--separator);
+  transition: box-shadow 0.25s, transform 0.25s var(--spring);
+}
+.mat-tile:active .mat-preview { transform: scale(0.97); }
+.mat-tile[aria-checked="true"] .mat-preview { box-shadow: 0 0 0 2px var(--accent); }
+.mat-orb {
+  position: absolute; left: 17%; top: 13%; width: 38%; aspect-ratio: 1; border-radius: 50%;
+  background: var(--accent-grad);
+}
+.mat-card {
+  position: absolute; inset: 30% 12% 16% 22%; padding: 0 12%; border-radius: 12px;
+  display: flex; flex-direction: column; justify-content: center; gap: 6px;
+}
+.mat-card i { height: 5px; border-radius: 99px; background: var(--label); opacity: 0.6; }
+.mat-card i + i { width: 60%; opacity: 0.32; }
+.mat-liquid .mat-card {
+  background: rgba(255, 255, 255, 0.14);
+  -webkit-backdrop-filter: blur(1.5px) saturate(190%);
+  backdrop-filter: blur(1.5px) saturate(190%);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.55), inset 1px 1px 0 rgba(255, 255, 255, 0.65), 0 6px 14px rgba(0, 0, 0, 0.16);
+}
+.mat-matte .mat-card {
+  background: color-mix(in srgb, var(--bg) 38%, transparent);
+  -webkit-backdrop-filter: blur(9px) saturate(125%);
+  backdrop-filter: blur(9px) saturate(125%);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.16), 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+.mat-matte .mat-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: var(--grain); opacity: 0.09;
+}
 
 /* Kaydırıcı (iOS: solda dolu iz, beyaz yuvarlak tutamaç) */
 .slider-row { display: flex; align-items: center; gap: 10px; }

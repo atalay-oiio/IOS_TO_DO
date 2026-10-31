@@ -28,12 +28,14 @@ export type TodoList = { id: string; name: string; color: string };
 export type View = "today" | "planned" | "all" | "flagged";
 export type SortMode = "manual" | "due" | "priority" | "title";
 export type ThemeMode = "system" | "light" | "dark";
+export type Material = "matte" | "liquid";
 
 export type Settings = {
   view: View; // son açık sekme; uygulama yeniden açılınca oradan devam eder
   theme: ThemeMode;
   accent: string; // paint id (eski "#rrggbb" kayıtları yüklenirken çevrilir)
-  glass: number; // cam görünümü: 0 şeffaf … 4 buzlu
+  material: Material; // cam malzemesi: buzlu mat ya da parlak sıvı cam
+  glass: number; // cam yoğunluğu: 0 şeffaf … 4 buzlu
   showCompleted: boolean;
   confirmDelete: boolean;
   celebrate: boolean;
@@ -65,6 +67,8 @@ export const PRIORITY_LABELS = ["Yok", "Düşük", "Orta", "Yüksek"] as const;
 
 export const GLASS_LABELS = ["Şeffaf", "Hafif şeffaf", "Dengeli", "Hafif buzlu", "Buzlu"] as const;
 
+export const MATERIAL_LABELS: Record<Material, string> = { matte: "Buzlu mat", liquid: "Sıvı cam" };
+
 export const VIEW_TITLES: Record<View, string> = {
   today: "Bugün",
   planned: "Planlanan",
@@ -76,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
   view: "all",
   theme: "system",
   accent: DEFAULT_PAINT,
+  material: "matte",
   glass: 2,
   showCompleted: true,
   confirmDelete: true,

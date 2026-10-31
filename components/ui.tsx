@@ -1,7 +1,9 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import { Icon } from "./icons";
 import { haptic } from "@/lib/haptics";
+import { MATERIAL_LABELS, type Material } from "@/lib/types";
 
 export function Switch({
   checked,
@@ -106,6 +108,47 @@ export function Slider({
         }}
       />
       <span className="slider-end">{end}</span>
+    </div>
+  );
+}
+
+// Cam malzemesi seçimi: iOS'taki Açık/Koyu seçimi gibi iki canlı önizleme
+export function MaterialPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: Material;
+  onChange: (v: Material) => void;
+  label: string;
+}) {
+  return (
+    <div className="mat-picker" role="radiogroup" aria-label={label}>
+      {(Object.keys(MATERIAL_LABELS) as Material[]).map((m) => (
+        <button
+          key={m}
+          type="button"
+          role="radio"
+          aria-checked={m === value}
+          className={`mat-tile mat-${m}`}
+          onClick={() => {
+            if (m !== value) haptic("select");
+            onChange(m);
+          }}
+        >
+          <span className="mat-preview" aria-hidden>
+            <span className="mat-orb" />
+            <span className="mat-card">
+              <i />
+              <i />
+            </span>
+          </span>
+          {MATERIAL_LABELS[m]}
+          <span className={`check small ${m === value ? "on" : ""}`} aria-hidden>
+            <Icon name="check" size={12} stroke={3.4} />
+          </span>
+        </button>
+      ))}
     </div>
   );
 }
