@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
-import { MaterialPicker, PaintDots, Segmented, Slider, Switch, type PaintOption } from "./ui";
+import { crossfade, MaterialPicker, PaintDots, Segmented, Slider, Switch, type PaintOption } from "./ui";
 import { Icon } from "./icons";
 import type { usePush } from "@/lib/push-client";
 import { scheduledSummary } from "@/lib/reminders";
@@ -104,7 +104,7 @@ export function SettingsSheet({
           <Segmented<ThemeMode>
             label="Tema"
             value={settings.theme}
-            onChange={(theme) => setSettings({ theme })}
+            onChange={(theme) => crossfade(() => setSettings({ theme }))}
             options={[
               { value: "system", label: "Otomatik" },
               { value: "light", label: "Açık" },
@@ -116,7 +116,7 @@ export function SettingsSheet({
             label="Vurgu rengi"
             options={PAINT_OPTIONS}
             value={resolvePaint(settings.accent).id}
-            onChange={(accent) => setSettings({ accent })}
+            onChange={(accent) => crossfade(() => setSettings({ accent }))}
           />
           <p className="pad-label">Cam malzemesi</p>
           <MaterialPicker

@@ -94,7 +94,7 @@
   backdrop-filter: var(--glass-filter-strong);
   outline: none;
   animation: sheet-in 0.5s var(--ease);
-  transition: transform 0.35s var(--ease), background-color 0.35s ease;
+  transition: transform 0.35s var(--ease);
 }
 .sheet.dragging { transition: none; }
 .layer.closing .sheet { animation: sheet-out 0.28s var(--ease) forwards; }
@@ -242,6 +242,10 @@
 }
 .color-dot:active { transform: scale(0.85); }
 .color-dot.on { outline: 2.5px solid var(--label); outline-offset: 3px; }
+
+/* Malzeme değişiminde tüm ekranın çapraz geçişi */
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 0.3s; }
 
 /* Cam malzemesi seçici (iOS'taki Açık/Koyu seçimi gibi): aynı küre iki farklı camın arkasında */
 .mat-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

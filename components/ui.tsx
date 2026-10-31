@@ -1,9 +1,17 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { Icon } from "./icons";
 import { haptic } from "@/lib/haptics";
 import { MATERIAL_LABELS, type Material } from "@/lib/types";
+
+// Tüm sayfayı etkileyen görsel değişiklik: tarayıcı eski görüntüyü tutar, yeni stil arkada hesaplanır ve
+// iki görüntü GPU'da çapraz geçiş yapar. Böylece yavaş telefonda ekran donmuş ya da yanıp sönmüş görünmez.
+export function crossfade(update: () => void) {
+  if (!document.startViewTransition || matchMedia("(prefers-reduced-motion: reduce)").matches) return update();
+  document.startViewTransition(() => flushSync(update));
+}
 
 export function Switch({
   checked,
@@ -122,6 +130,16 @@ export function MaterialPicker({
   onChange: (v: Material) => void;
   label: string;
 }) {
+  // Seçim dokunur dokunmaz görünür; bütün camları etkileyen asıl değişim bir kare sonra başlar
+  const [picked, setPicked] = useState(value);
+  useEffect(() => setPicked(value), [value]);
+  const pick = (m: Material) => {
+    if (m === picked) return;
+    haptic("select");
+    setPicked(m);
+    requestAnimationFrame(() => setTimeout(() => crossfade(() => onChange(m))));
+  };
+
   return (
     <div className="mat-picker" role="radiogroup" aria-label={label}>
       {(Object.keys(MATERIAL_LABELS) as Material[]).map((m) => (
@@ -129,12 +147,9 @@ export function MaterialPicker({
           key={m}
           type="button"
           role="radio"
-          aria-checked={m === value}
+          aria-checked={m === picked}
           className={`mat-tile mat-${m}`}
-          onClick={() => {
-            if (m !== value) haptic("select");
-            onChange(m);
-          }}
+          onClick={() => pick(m)}
         >
           <span className="mat-preview" aria-hidden>
             <span className="mat-orb" />
@@ -144,7 +159,7 @@ export function MaterialPicker({
             </span>
           </span>
           {MATERIAL_LABELS[m]}
-          <span className={`check small ${m === value ? "on" : ""}`} aria-hidden>
+          <span className={`check small ${m === picked ? "on" : ""}`} aria-hidden>
             <Icon name="check" size={12} stroke={3.4} />
           </span>
         </button>
