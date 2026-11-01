@@ -34,12 +34,13 @@
   /* Vurgu: --accent-l/-d, --accent-grad ve --ring-* seçili renge göre layout'ta üretilir (lib/paint.ts) */
   --accent: var(--accent-l);
 
-  /* Arka plandaki ışık vurgu rengini izler (ring renkleri lib/paint.ts'ten gelir) */
-  --blob-1: var(--ring-1);
-  --blob-2: var(--ring-3);
-  --blob-3: var(--ring-2);
-  --blob-4: var(--ring-1);
-  --blob-o: 0.7;
+  /* Arka plandaki ışık vurgu rengini izler (ring renkleri lib/paint.ts'ten gelir).
+     Boyaların açık tonları açık zeminde silik kaldığı için burada koyu tonuyla karıştırılır. */
+  --blob-1: color-mix(in srgb, var(--ring-1) 60%, var(--accent-l));
+  --blob-2: color-mix(in srgb, var(--ring-3) 60%, var(--accent-l));
+  --blob-3: color-mix(in srgb, var(--ring-2) 60%, var(--accent-l));
+  --blob-4: var(--blob-1);
+  --blob-o: 0.56;
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
@@ -72,49 +73,55 @@
 
   --accent: var(--accent-d);
 
+  --blob-1: var(--ring-1);
+  --blob-2: var(--ring-3);
+  --blob-3: var(--ring-2);
   --blob-o: 0.44;
 }
 
 /* ============ Cam görünümü (Ayarlar → Şeffaf ↔ Buzlu, iOS 27) ============ */
 /* 2 = varsayılan (yukarıdaki değerler). 4 = buzlu: neredeyse opak, bulanıklaştırma yok (zayıf telefonlarda akıcı).
-   "Şeffaflığı azalt" açık cihazlarda her zaman 4 kullanılır. */
-:root[data-glass="0"] { --glass-bg: rgba(255, 255, 255, 0.3); --glass-strong: rgba(250, 250, 255, 0.6); --group-bg: rgba(255, 255, 255, 0.55); --blur: 20px; }
-:root[data-glass="1"] { --glass-bg: rgba(255, 255, 255, 0.4); --glass-strong: rgba(250, 250, 255, 0.7); --group-bg: rgba(255, 255, 255, 0.64); --blur: 25px; }
+   "Şeffaflığı azalt" açık cihazlarda her zaman 4 kullanılır.
+   Şeffaf uçta cam rengi perdelemez; ışık ve doygunluk kısılır ki göz almasın. */
+:root[data-glass="0"] { --glass-bg: rgba(255, 255, 255, 0.3); --glass-strong: rgba(250, 250, 255, 0.6); --group-bg: rgba(255, 255, 255, 0.55); --blur: 20px; --glass-sat: 135%; --blob-o: 0.38; }
+:root[data-glass="1"] { --glass-bg: rgba(255, 255, 255, 0.4); --glass-strong: rgba(250, 250, 255, 0.7); --group-bg: rgba(255, 255, 255, 0.64); --blur: 25px; --glass-sat: 160%; --blob-o: 0.46; }
 :root[data-glass="3"] { --glass-bg: rgba(255, 255, 255, 0.68); --glass-strong: rgba(250, 250, 255, 0.88); --group-bg: rgba(255, 255, 255, 0.8); --blur: 36px; --bar-bg: color-mix(in srgb, var(--bg) 86%, transparent); }
 :root[data-glass="4"] {
   --glass-bg: rgba(250, 250, 255, 0.93); --glass-strong: rgba(248, 248, 253, 0.97); --group-bg: rgba(255, 255, 255, 0.9);
   --glass-filter: none; --glass-filter-soft: none; --glass-filter-strong: none;
   --bar-bg: color-mix(in srgb, var(--bg) 97%, transparent);
 }
-:root[data-theme="dark"][data-glass="0"] { --glass-bg: rgba(255, 255, 255, 0.035); --glass-strong: rgba(34, 34, 48, 0.55); --group-bg: rgba(255, 255, 255, 0.05); }
-:root[data-theme="dark"][data-glass="1"] { --glass-bg: rgba(255, 255, 255, 0.05); --glass-strong: rgba(34, 34, 48, 0.64); --group-bg: rgba(255, 255, 255, 0.06); }
+:root[data-theme="dark"][data-glass="0"] { --glass-bg: rgba(255, 255, 255, 0.035); --glass-strong: rgba(34, 34, 48, 0.55); --group-bg: rgba(255, 255, 255, 0.05); --blob-o: 0.24; }
+:root[data-theme="dark"][data-glass="1"] { --glass-bg: rgba(255, 255, 255, 0.05); --glass-strong: rgba(34, 34, 48, 0.64); --group-bg: rgba(255, 255, 255, 0.06); --blob-o: 0.33; }
 :root[data-theme="dark"][data-glass="3"] { --glass-bg: rgba(44, 44, 60, 0.6); --glass-strong: rgba(34, 34, 48, 0.86); --group-bg: rgba(255, 255, 255, 0.08); }
 :root[data-theme="dark"][data-glass="4"] { --glass-bg: rgba(30, 30, 42, 0.95); --glass-strong: rgba(28, 28, 38, 0.97); --group-bg: rgba(255, 255, 255, 0.08); }
 
 /* ============ Buzlu mat malzeme (Ayarlar → Cam malzemesi) ============ */
 /* Kumlanmış cam: ışığı geçirir ama yansıtmaz. Sütlü yüzey, düşük doygunluk, yönsüz ince kenar, hafif gren. */
 :root[data-material="matte"] {
-  --glass-sat: 125%;
-  --glass-bg: rgba(252, 252, 255, 0.58); --glass-strong: rgba(248, 248, 252, 0.84); --group-bg: rgba(255, 255, 255, 0.62);
+  --glass-sat: 150%;
+  --label-2: rgba(60, 60, 67, 0.74);
+  --glass-bg: rgba(252, 252, 255, 0.5); --glass-strong: rgba(248, 248, 252, 0.82); --group-bg: rgba(255, 255, 255, 0.56);
   --glass-rim: rgba(255, 255, 255, 0.6); --glass-rim-2: rgba(255, 255, 255, 0.3); --rim-mid: rgba(255, 255, 255, 0.22);
   --glass-spec: rgba(255, 255, 255, 0.28); --glass-edge: rgba(30, 30, 60, 0.06);
   --glass-shadow: 0 16px 48px rgba(40, 40, 90, 0.08), 0 1px 2px rgba(40, 40, 90, 0.04);
-  --blur: 38px; --blob-o: 0.38; --grain-o: 0.07;
+  --blur: 38px; --blob-o: 0.5; --grain-o: 0.07;
 }
 :root[data-theme="dark"][data-material="matte"] {
-  --glass-bg: rgba(70, 70, 88, 0.34); --glass-strong: rgba(38, 38, 50, 0.82); --group-bg: rgba(255, 255, 255, 0.06);
+  --label-2: rgba(235, 235, 245, 0.66);
+  --glass-bg: rgba(66, 66, 86, 0.3); --glass-strong: rgba(38, 38, 50, 0.8); --group-bg: rgba(255, 255, 255, 0.06);
   --glass-rim: rgba(255, 255, 255, 0.16); --glass-rim-2: rgba(255, 255, 255, 0.06); --rim-mid: rgba(255, 255, 255, 0.05);
   --glass-spec: rgba(255, 255, 255, 0.03); --glass-edge: rgba(0, 0, 0, 0.4);
   --glass-shadow: 0 18px 54px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.16);
-  --blob-o: 0.3; --grain-o: 0.09;
+  --blob-o: 0.4; --grain-o: 0.09;
 }
-:root[data-material="matte"][data-glass="0"] { --glass-bg: rgba(252, 252, 255, 0.42); --glass-strong: rgba(248, 248, 252, 0.68); --group-bg: rgba(255, 255, 255, 0.5); --blur: 30px; }
-:root[data-material="matte"][data-glass="1"] { --glass-bg: rgba(252, 252, 255, 0.5); --glass-strong: rgba(248, 248, 252, 0.76); --group-bg: rgba(255, 255, 255, 0.56); --blur: 34px; }
-:root[data-material="matte"][data-glass="3"] { --glass-bg: rgba(252, 252, 255, 0.72); --glass-strong: rgba(248, 248, 252, 0.91); --group-bg: rgba(255, 255, 255, 0.8); --blur: 42px; }
+:root[data-material="matte"][data-glass="0"] { --glass-bg: rgba(252, 252, 255, 0.36); --glass-strong: rgba(248, 248, 252, 0.66); --group-bg: rgba(255, 255, 255, 0.44); --blur: 30px; }
+:root[data-material="matte"][data-glass="1"] { --glass-bg: rgba(252, 252, 255, 0.43); --glass-strong: rgba(248, 248, 252, 0.74); --group-bg: rgba(255, 255, 255, 0.5); --blur: 34px; }
+:root[data-material="matte"][data-glass="3"] { --glass-bg: rgba(252, 252, 255, 0.66); --glass-strong: rgba(248, 248, 252, 0.9); --group-bg: rgba(255, 255, 255, 0.76); --blur: 42px; }
 :root[data-material="matte"][data-glass="4"] { --glass-bg: rgba(250, 250, 253, 0.93); --glass-strong: rgba(248, 248, 252, 0.97); --group-bg: rgba(255, 255, 255, 0.9); }
-:root[data-theme="dark"][data-material="matte"][data-glass="0"] { --glass-bg: rgba(70, 70, 88, 0.2); --glass-strong: rgba(38, 38, 50, 0.64); --group-bg: rgba(255, 255, 255, 0.04); }
-:root[data-theme="dark"][data-material="matte"][data-glass="1"] { --glass-bg: rgba(70, 70, 88, 0.27); --glass-strong: rgba(38, 38, 50, 0.73); --group-bg: rgba(255, 255, 255, 0.05); }
-:root[data-theme="dark"][data-material="matte"][data-glass="3"] { --glass-bg: rgba(62, 62, 80, 0.56); --glass-strong: rgba(38, 38, 50, 0.9); --group-bg: rgba(255, 255, 255, 0.07); }
+:root[data-theme="dark"][data-material="matte"][data-glass="0"] { --glass-bg: rgba(66, 66, 86, 0.17); --glass-strong: rgba(38, 38, 50, 0.64); --group-bg: rgba(255, 255, 255, 0.04); }
+:root[data-theme="dark"][data-material="matte"][data-glass="1"] { --glass-bg: rgba(66, 66, 86, 0.23); --glass-strong: rgba(38, 38, 50, 0.72); --group-bg: rgba(255, 255, 255, 0.05); }
+:root[data-theme="dark"][data-material="matte"][data-glass="3"] { --glass-bg: rgba(60, 60, 80, 0.5); --glass-strong: rgba(38, 38, 50, 0.89); --group-bg: rgba(255, 255, 255, 0.07); }
 :root[data-theme="dark"][data-material="matte"][data-glass="4"] { --glass-bg: rgba(40, 40, 52, 0.95); --glass-strong: rgba(34, 34, 44, 0.97); --group-bg: rgba(255, 255, 255, 0.08); }
 
 /* Yüksek kontrast: daha koyu ikincil yazılar, belirgin ayraçlar ve cam kenarları */
