@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import {
   DndContext,
   closestCenter,
@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { restrictToVerticalAxis } from "./dnd";
-import { TaskRow } from "./TaskRow";
+import { TaskRow, type RowAction } from "./TaskRow";
 import { TaskSheet } from "./TaskSheet";
 import { SettingsSheet } from "./SettingsSheet";
 import { ListsSheet } from "./ListsSheet";
@@ -63,6 +63,13 @@ const GROUP_ORDER = ["Gecikmiş", "Bugün", "Yarın", "Bu Hafta", "Bu Ay", "Daha
 
 const fold = (s: string) => s.toLocaleLowerCase("tr");
 
+// Sürükle-bırak ayarları sabit: her çizimde yenilenseler bütün satırlar da yeniden çizilir
+const DRAG_MODIFIERS = [restrictToVerticalAxis];
+const MOUSE_DRAG = { activationConstraint: { distance: 6 } };
+const TOUCH_DRAG = { activationConstraint: { delay: 260, tolerance: 8 } };
+const KEYBOARD_DRAG = { coordinateGetter: sortableKeyboardCoordinates };
+const onDragStart = () => haptic("tap");
+
 export default function TodoApp() {
   const store = useTodoStore();
   const { loaded, todos, lists, settings, setSettings } = store;
@@ -87,7 +94,7 @@ export default function TodoApp() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [completedOpen, setCompletedOpen] = useState(true);
   const [scrolled, setScrolled] = useState(false);
-  const [, setTick] = useState(0);
+  const [tick, setTick] = useState(0);
   const [banner, setBanner] = useState<{ id: string; title: string; body: string } | null>(null);
   const [online, setOnline] = useState(true);
   const [inputFocused, setInputFocused] = useState(false);
@@ -244,6 +251,8 @@ export default function TodoApp() {
   const sortMode: SortMode = view === "planned" ? "due" : settings.sort;
   const sorted = sortTodos(visible, sortMode);
   const active = sorted.filter((t) => !t.done);
+  const activeKey = active.map((t) => t.id).join(",");
+  const activeIds = useMemo(() => activeKey.split(","), [activeKey]);
   const completed = visible.filter((t) => t.done).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
   const sortable = sortMode === "manual" && !q;
 
@@ -534,9 +543,9 @@ export default function TodoApp() {
   }, [loaded]);
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 260, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(MouseSensor, MOUSE_DRAG),
+    useSensor(TouchSensor, TOUCH_DRAG),
+    useSensor(KeyboardSensor, KEYBOARD_DRAG)
   );
 
   const onDragEnd = ({ active: a, over }: DragEndEvent) => {
@@ -570,6 +579,27 @@ export default function TodoApp() {
     { label: "Ayarlar", icon: "sliders", onClick: () => setSettingsOpen(true) },
   ];
 
+  // Satırlar memo'lu: geri çağrının kimliği değişmez ama her zaman güncel duruma bakar
+  const rowHandler = useRef<(action: RowAction, t: Todo, arg?: string) => void>(null!);
+  rowHandler.current = (action, t, arg) => {
+    if (action === "toggle") toggle(t.id);
+    else if (action === "edit") setEditingId(t.id);
+    else if (action === "cancel") setEditingId(null);
+    else if (action === "info") setTaskSheet({ open: true, todo: t });
+    else if (action === "delete") requestDelete(t.id);
+    else if (action === "save") {
+      const clean = (arg ?? "").trim();
+      if (clean && clean !== t.text) store.update(t.id, { text: clean });
+      setEditingId(null);
+    } else {
+      haptic("select");
+      if (action === "flag") store.update(t.id, { flagged: !t.flagged });
+      else
+        store.update(t.id, { subtasks: t.subtasks.map((s) => (s.id === arg ? { ...s, done: !s.done } : s)) });
+    }
+  };
+  const onRowAction = useCallback((action: RowAction, t: Todo, arg?: string) => rowHandler.current(action, t, arg), []);
+
   if (!loaded) return <main className="shell" aria-busy="true" />;
 
   const title = VIEW_TITLES[view];
@@ -582,24 +612,8 @@ export default function TodoApp() {
       sortable={canSort}
       editing={editingId === t.id}
       checking={checking.has(t.id)}
-      onToggle={() => toggle(t.id)}
-      onEdit={() => setEditingId(t.id)}
-      onSave={(text) => {
-        const clean = text.trim();
-        if (clean && clean !== t.text) store.update(t.id, { text: clean });
-        setEditingId(null);
-      }}
-      onCancel={() => setEditingId(null)}
-      onInfo={() => setTaskSheet({ open: true, todo: t })}
-      onFlag={() => {
-        haptic("select");
-        store.update(t.id, { flagged: !t.flagged });
-      }}
-      onDelete={() => requestDelete(t.id)}
-      onSubtask={(sid) => {
-        haptic("select");
-        store.update(t.id, { subtasks: t.subtasks.map((s) => (s.id === sid ? { ...s, done: !s.done } : s)) });
-      }}
+      tick={tick}
+      onAction={onRowAction}
     />
   );
 
@@ -790,8 +804,8 @@ export default function TodoApp() {
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        onDragStart={() => haptic("tap")}
+        modifiers={DRAG_MODIFIERS}
+        onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
         {view === "planned" ? (
@@ -802,7 +816,7 @@ export default function TodoApp() {
             </section>
           ))
         ) : active.length > 0 ? (
-          <SortableContext items={active.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={activeIds} strategy={verticalListSortingStrategy}>
             <ul className="group-list material">{active.map((t) => renderRow(t, sortable))}</ul>
           </SortableContext>
         ) : null}

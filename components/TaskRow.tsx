@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Icon } from "./icons";
@@ -11,6 +11,8 @@ import { REPEAT_LABELS, type Todo, type TodoList } from "@/lib/types";
 
 const ACTIONS_W = 144; // sola kaydırınca açılan iki butonun genişliği
 
+export type RowAction = "toggle" | "edit" | "save" | "cancel" | "info" | "flag" | "delete" | "subtask";
+
 type Props = {
   todo: Todo;
   list?: TodoList;
@@ -18,32 +20,29 @@ type Props = {
   sortable: boolean;
   editing: boolean;
   checking?: boolean; // tekrarlayan görev tamamlandı: sonraki tarihe geçmeden önce onay bir an görünür
-  onToggle: () => void;
-  onEdit: () => void;
-  onSave: (text: string) => void;
-  onCancel: () => void;
-  onInfo: () => void;
-  onFlag: () => void;
-  onDelete: () => void;
-  onSubtask: (subtaskId: string) => void;
+  tick: number; // dakikada bir artar: "Bugün" ve gecikmiş etiketleri memo'ya rağmen güncel kalır
+  onAction: (action: RowAction, todo: Todo, arg?: string) => void; // kimliği değişmez
 };
 
-export function TaskRow({
+// memo: satır yalnızca kendi verisi değişince çizilir; sayfa açmak ya da yazı yazmak bütün listeyi yormaz
+export const TaskRow = memo(function TaskRow({
   todo,
   list,
   showList,
   sortable,
   editing,
   checking,
-  onToggle,
-  onEdit,
-  onSave,
-  onCancel,
-  onInfo,
-  onFlag,
-  onDelete,
-  onSubtask,
+  onAction,
 }: Props) {
+  const onToggle = () => onAction("toggle", todo);
+  const onEdit = () => onAction("edit", todo);
+  const onSave = (text: string) => onAction("save", todo, text);
+  const onCancel = () => onAction("cancel", todo);
+  const onInfo = () => onAction("info", todo);
+  const onFlag = () => onAction("flag", todo);
+  const onDelete = () => onAction("delete", todo);
+  const onSubtask = (id: string) => onAction("subtask", todo, id);
+
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: todo.id, disabled: editing || !sortable });
 
@@ -338,4 +337,4 @@ export function TaskRow({
       </div>
     </li>
   );
-}
+});

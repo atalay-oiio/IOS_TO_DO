@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sheet, SheetHeader } from "./Sheet";
 import { Segmented, Switch } from "./ui";
 import { Icon } from "./icons";
@@ -64,13 +64,16 @@ export function TaskSheet({
   const [subInput, setSubInput] = useState("");
   const isNew = !todo;
 
-  // Her açılışta taslağı sıfırla
-  useEffect(() => {
-    if (!open) return;
-    setD(todo ? fromTodo(todo) : blank(defaults));
-    setSubInput("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, todo?.id]);
+  // Her açılışta taslağı sıfırla (ilk karede doğru görev görünsün diye çizimden önce)
+  const session = open ? (todo?.id ?? "new") : null;
+  const [lastSession, setLastSession] = useState(session);
+  if (session !== lastSession) {
+    setLastSession(session);
+    if (open) {
+      setD(todo ? fromTodo(todo) : blank(defaults));
+      setSubInput("");
+    }
+  }
 
   const set = (patch: Partial<Draft>) => setD((prev) => ({ ...prev, ...patch }));
 

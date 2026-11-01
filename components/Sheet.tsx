@@ -79,21 +79,15 @@ export function useLayer(open: boolean, onClose: () => void, lock = true) {
 // Kapanış animasyonu bitene kadar DOM'da tut
 function usePresence(open: boolean, ms = 280) {
   const [render, setRender] = useState(open);
-  const [closing, setClosing] = useState(false);
+  // Açılış aynı turda: sayfa dokunuştan sonra ayrıca bir tur beklemesin
+  if (open && !render) setRender(true);
+  const closing = render && !open;
   useEffect(() => {
-    if (open) {
-      setRender(true);
-      setClosing(false);
-      return;
-    }
-    setClosing(true);
-    const t = setTimeout(() => {
-      setRender(false);
-      setClosing(false);
-    }, ms);
+    if (open) return;
+    const t = setTimeout(() => setRender(false), ms);
     return () => clearTimeout(t);
   }, [open, ms]);
-  return { render, closing };
+  return { render: render || open, closing };
 }
 
 export function Sheet({
@@ -112,8 +106,9 @@ export function Sheet({
   const drag = useRef<{ y: number; t: number; dy: number } | null>(null);
   useLayer(open, onClose);
 
+  // İçerik kendisi odaklandıysa (yeni görevin başlık kutusu) odağı çalma, klavye açık kalsın
   useEffect(() => {
-    if (open) panel.current?.focus({ preventScroll: true });
+    if (open && !panel.current?.contains(document.activeElement)) panel.current?.focus({ preventScroll: true });
   }, [open]);
 
   if (!render) return null;

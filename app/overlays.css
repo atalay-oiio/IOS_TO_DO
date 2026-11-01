@@ -93,13 +93,15 @@
   -webkit-backdrop-filter: var(--glass-filter-strong);
   backdrop-filter: var(--glass-filter-strong);
   outline: none;
-  animation: sheet-in 0.5s var(--ease);
+  /* Kayan büyük camı her karede bulanıklaştırmak telefonda takılır: kayarken kapalı, yerine oturunca açılır */
+  animation: sheet-in 0.38s var(--ease), sheet-still 0.38s steps(1, end);
   transition: transform 0.35s var(--ease);
 }
 .sheet.dragging { transition: none; }
-.layer.closing .sheet { animation: sheet-out 0.28s var(--ease) forwards; }
+.layer.closing .sheet { animation: sheet-out 0.28s var(--ease) forwards, sheet-still 0.28s steps(1, end); }
 @keyframes sheet-in { from { transform: translateY(105%); } }
 @keyframes sheet-out { to { transform: translateY(105%); } }
+@keyframes sheet-still { from { -webkit-backdrop-filter: none; backdrop-filter: none; } }
 
 .sheet-drag { display: flex; justify-content: center; padding: 8px 0 4px; cursor: grab; touch-action: none; flex-shrink: 0; }
 .grabber { width: 38px; height: 5px; border-radius: 99px; background: var(--label-3); }
