@@ -147,6 +147,7 @@ export function Sheet({
         aria-label={label}
         tabIndex={-1}
       >
+        <span className="sheet-veil" aria-hidden="true" />
         <div
           className="sheet-drag"
           onPointerDown={onDown}

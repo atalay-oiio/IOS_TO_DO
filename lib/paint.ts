@@ -26,12 +26,12 @@ export const GRADIENTS: Paint[] = [
   { id: "ocean", name: "Okyanus", from: "#5BE7FF", mid: "#2F9BFF", to: "#3B4FE0", solid: "#2F9BFF", solidLight: "#1266CC" },
   { id: "sand", name: "Kumsal", from: "#EBD3A4", to: "#2B8F8C", solid: "#5FB8A8", solidLight: "#1F7F7A" },
   { id: "forest", name: "Orman", from: "#9BF6A0", mid: "#3FD67F", to: "#0FA7A0", solid: "#2FC489", solidLight: "#0E8F68" },
-  { id: "olive", name: "Zeytin", from: "#CFC98A", to: "#5F6B2E", solid: "#B5B35C", solidLight: "#6B7029" },
   { id: "lemon", name: "Limon", from: "#FFE066", mid: "#DDE85C", to: "#9BE15D", solid: "#C3DE4F", solidLight: "#6E8F17" },
   { id: "copper", name: "Bakır", from: "#FFD98E", mid: "#E8A23C", to: "#B4592A", solid: "#E09A3C", solidLight: "#A25A1C" },
   { id: "peach", name: "Şeftali", from: "#FFD59E", mid: "#FF9E8A", to: "#FF6E9C", solid: "#FF9E8A", solidLight: "#E05A78" },
   { id: "sunset", name: "Gün batımı", from: "#FFB020", mid: "#FF7A45", to: "#FF375F", solid: "#FF7A45", solidLight: "#D9481F" },
-  { id: "rose", name: "Gül kurusu", from: "#E3A6A1", to: "#9C3D4E", solid: "#D9808A", solidLight: "#A33A4B" },
+  { id: "rose", name: "Gül kurusu", from: "#FFB5AB", to: "#D63A52", solid: "#EE6F80", solidLight: "#C62E48" },
+  { id: "fuchsia", name: "Fuşya", from: "#FF82CC", to: "#C026D3", solid: "#E455C8", solidLight: "#B3229F" },
   { id: "twilight", name: "Alacakaranlık", from: "#FFA76B", mid: "#D06CC8", to: "#7A5CFF", solid: "#C06BD8", solidLight: "#7E3FAF" },
   { id: "lavender", name: "Lavanta", from: "#D6A8FF", mid: "#A77BFF", to: "#6A5AE0", solid: "#A77BFF", solidLight: "#7B4FE0" },
   { id: "midnight", name: "Gece", from: "#6E8BFF", mid: "#7C5CFF", to: "#B14BFF", solid: "#7C5CFF", solidLight: "#5A3ADB" },
@@ -43,6 +43,7 @@ const RETIRED: Paint[] = [
   { id: "blue", name: "Mavi", from: "#0A84FF", to: "#0A84FF", solid: "#0A84FF", solidLight: "#0069D9" },
   { id: "orange", name: "Turuncu", from: "#FF9F0A", to: "#FF9F0A", solid: "#FF9F0A", solidLight: "#D97800" },
   { id: "graphite", name: "Grafit", from: "#8E8E93", to: "#8E8E93", solid: "#8E8E93", solidLight: "#636368" },
+  { id: "olive", name: "Zeytin", from: "#CFC98A", to: "#5F6B2E", solid: "#B5B35C", solidLight: "#6B7029" },
 ];
 
 export const PAINTS = [...GRADIENTS, ...SOLIDS];
@@ -81,7 +82,7 @@ export function paintStyle(value: string | undefined | null): CSSProperties {
 
 // ---------- Vurgu rengi ----------
 // Eski sürümlerde vurgu rengi "#0A84FF" gibi düz kodla kayıtlıydı; her biri bir paint'e karşılık gelir.
-// Seçicilerden kaldırılan renkler (camgöbeği, mavi, turuncu, grafit) en yakınlarına geçer.
+// Seçicilerden kaldırılan renkler (camgöbeği, mavi, turuncu, grafit, zeytin) en yakınlarına geçer.
 export const ACCENT_ALIASES: Record<string, string> = {
   ...Object.fromEntries(PAINTS.map((p) => [p.solid.toLowerCase(), p.id])),
   "#64d2ff": "teal",
@@ -91,6 +92,8 @@ export const ACCENT_ALIASES: Record<string, string> = {
   "#ff9f0a": "sunset",
   graphite: "steel",
   "#8e8e93": "steel",
+  olive: "forest",
+  "#b5b35c": "forest",
 };
 
 export function accentId(value: string | undefined | null): string {
